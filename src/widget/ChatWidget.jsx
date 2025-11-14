@@ -97,6 +97,9 @@ function ChatWidget({ apiUrl, wsUrl }) {
   }, [messages, isOpen]);
 
   const markAsRead = async (messageId) => {
+    // Only mark as read if window is focused
+    if (!document.hasFocus()) return;
+
     try {
       await axios.patch(`${apiUrl}/messages/${messageId}/read`);
     } catch (error) {
@@ -459,7 +462,7 @@ function ChatWidget({ apiUrl, wsUrl }) {
                           }}
                         >
                           <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                            typing...
+                            ...
                           </Typography>
                         </Paper>
                       </Box>

@@ -97,6 +97,9 @@ function ChatWindow({ chat, staffName }) {
   };
 
   const markAsRead = async (messageId) => {
+    // Only mark as read if window is focused
+    if (!document.hasFocus()) return;
+
     try {
       await axios.patch(`${API_URL}/messages/${messageId}/read`);
     } catch (error) {
@@ -316,7 +319,7 @@ function ChatWindow({ chat, staffName }) {
                 }}
               >
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  typing...
+                  ...
                 </Typography>
               </Paper>
             </Box>
