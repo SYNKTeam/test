@@ -179,7 +179,7 @@ function ChatWidget({ apiUrl, wsUrl }) {
     try {
       await axios.post(`${apiUrl}/messages`, {
         message: newMessage,
-        author: userId,
+        author: username, // Use the customer's name, not the ID
         chatParentID: chatId
       });
 

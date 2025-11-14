@@ -101,9 +101,14 @@ pb.collection('chats').subscribe('*', (e) => {
 
 app.post('/api/users', async (req, res) => {
   try {
-    await authenticatePB();
-    const user = await pb.collection('liveChatUsers').create(req.body);
-    res.json(user);
+    // Simply generate a unique ID for the customer
+    // We don't need to store customers in PocketBase
+    const customerId = `customer_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    res.json({
+      id: customerId,
+      username: req.body.username,
+      role: req.body.role || 'customer'
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
