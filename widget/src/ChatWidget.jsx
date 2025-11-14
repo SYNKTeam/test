@@ -142,31 +142,31 @@ function ChatWidget({ apiUrl, wsUrl }) {
         >
           <Box
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: '#00bfa5',
               color: 'white',
-              p: 2,
+              p: 2.5,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)', width: 40, height: 40 }}>
                 <SupportAgentIcon />
               </Avatar>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Live Support
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                  Chat with us
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                  We're here to help
+                <Typography variant="caption" sx={{ opacity: 0.95, fontSize: '0.8rem' }}>
+                  We typically reply instantly
                 </Typography>
               </Box>
             </Box>
             <IconButton
               size="small"
               onClick={() => setIsOpen(false)}
-              sx={{ color: 'white' }}
+              sx={{ color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
             >
               <MinimizeIcon />
             </IconButton>
@@ -184,21 +184,45 @@ function ChatWidget({ apiUrl, wsUrl }) {
                 gap: 3
               }}
             >
-              <ChatIcon sx={{ fontSize: 64, color: 'primary.main', opacity: 0.5 }} />
-              <Typography variant="h6" textAlign="center">
-                Welcome to Live Chat
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  backgroundColor: '#00bfa5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mb: 1
+                }}
+              >
+                <ChatIcon sx={{ fontSize: 32, color: 'white' }} />
+              </Box>
+              <Typography variant="h6" textAlign="center" sx={{ fontWeight: 600, mb: 1 }}>
+                Start a conversation
               </Typography>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
-                Enter your name to start chatting with our support team
+              <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 2 }}>
+                We usually respond within a few minutes
               </Typography>
               <TextField
                 fullWidth
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Your name"
+                placeholder="Enter your name"
                 variant="outlined"
                 autoFocus
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&:hover fieldset': {
+                      borderColor: '#00bfa5',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#00bfa5',
+                    }
+                  }
+                }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -206,7 +230,10 @@ function ChatWidget({ apiUrl, wsUrl }) {
                         onClick={handleJoin}
                         disabled={!username.trim()}
                         edge="end"
-                        color="primary"
+                        sx={{
+                          color: '#00bfa5',
+                          '&:disabled': { opacity: 0.3 }
+                        }}
                       >
                         <SendIcon />
                       </IconButton>
@@ -222,7 +249,7 @@ function ChatWidget({ apiUrl, wsUrl }) {
                   flex: 1,
                   overflow: 'auto',
                   p: 2,
-                  backgroundColor: '#f8f9fa'
+                  backgroundColor: '#ffffff'
                 }}
               >
                 {messages.length === 0 ? (
@@ -263,32 +290,42 @@ function ChatWidget({ apiUrl, wsUrl }) {
                         >
                           <Avatar
                             sx={{
-                              width: 28,
-                              height: 28,
-                              mx: 0.5,
-                              bgcolor: isStaff ? 'primary.main' : 'secondary.main'
+                              width: 32,
+                              height: 32,
+                              mx: 1,
+                              bgcolor: isStaff ? '#00bfa5' : '#64748b'
                             }}
                           >
                             {isStaff ? <SupportAgentIcon fontSize="small" /> : <PersonIcon fontSize="small" />}
                           </Avatar>
 
-                          <Paper
-                            elevation={1}
-                            sx={{
-                              p: 1.5,
-                              backgroundColor: isStaff ? 'white' : 'primary.main',
-                              color: isStaff ? 'text.primary' : 'white',
-                              borderRadius: 2,
-                              wordBreak: 'break-word'
-                            }}
-                          >
-                            <Typography variant="body2">{message.message}</Typography>
+                          <Box>
+                            <Paper
+                              elevation={0}
+                              sx={{
+                                p: 1.5,
+                                backgroundColor: isStaff ? '#f1f5f9' : '#00bfa5',
+                                color: isStaff ? '#1e293b' : 'white',
+                                borderRadius: '12px',
+                                borderTopLeftRadius: isStaff ? '4px' : '12px',
+                                borderTopRightRadius: isStaff ? '12px' : '4px',
+                                wordBreak: 'break-word',
+                                border: isStaff ? '1px solid #e2e8f0' : 'none'
+                              }}
+                            >
+                              <Typography variant="body2" sx={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
+                                {message.message}
+                              </Typography>
+                            </Paper>
                             <Typography
                               variant="caption"
                               sx={{
                                 display: 'block',
                                 mt: 0.5,
-                                opacity: 0.7,
+                                ml: isStaff ? 0.5 : 0,
+                                mr: isStaff ? 0 : 0.5,
+                                textAlign: isStaff ? 'left' : 'right',
+                                color: '#64748b',
                                 fontSize: '0.7rem'
                               }}
                             >
@@ -297,7 +334,7 @@ function ChatWidget({ apiUrl, wsUrl }) {
                                 minute: '2-digit'
                               })}
                             </Typography>
-                          </Paper>
+                          </Box>
                         </Box>
                       </Box>
                     );
@@ -308,7 +345,7 @@ function ChatWidget({ apiUrl, wsUrl }) {
 
               <Divider />
 
-              <Box sx={{ p: 2, backgroundColor: 'white' }}>
+              <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
                 <TextField
                   fullWidth
                   multiline
@@ -316,9 +353,21 @@ function ChatWidget({ apiUrl, wsUrl }) {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
+                  placeholder="Write a message..."
                   variant="outlined"
                   size="small"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: 'white',
+                      '&:hover fieldset': {
+                        borderColor: '#00bfa5',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#00bfa5',
+                      }
+                    }
+                  }}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
@@ -326,7 +375,10 @@ function ChatWidget({ apiUrl, wsUrl }) {
                           onClick={handleSend}
                           disabled={!newMessage.trim()}
                           edge="end"
-                          color="primary"
+                          sx={{
+                            color: '#00bfa5',
+                            '&:disabled': { opacity: 0.3 }
+                          }}
                         >
                           <SendIcon />
                         </IconButton>
@@ -341,16 +393,20 @@ function ChatWidget({ apiUrl, wsUrl }) {
       </Zoom>
 
       <Fab
-        color="primary"
         onClick={() => setIsOpen(!isOpen)}
         sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          width: 60,
+          height: 60,
+          backgroundColor: '#00bfa5',
+          color: 'white',
+          boxShadow: '0 4px 12px rgba(0,191,165,0.4)',
           '&:hover': {
-            background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)'
+            backgroundColor: '#008e76',
+            boxShadow: '0 6px 16px rgba(0,191,165,0.5)'
           }
         }}
       >
-        {isOpen ? <CloseIcon /> : <ChatIcon />}
+        {isOpen ? <CloseIcon sx={{ fontSize: 28 }} /> : <ChatIcon sx={{ fontSize: 28 }} />}
       </Fab>
     </Box>
   );

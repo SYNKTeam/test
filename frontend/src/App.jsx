@@ -1,134 +1,71 @@
-import { useState, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Paper,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Typography,
-  Badge,
-  Divider,
-  AppBar,
-  Toolbar
-} from '@mui/material';
-import ChatIcon from '@mui/icons-material/Chat';
-import ChatWindow from './components/ChatWindow';
-import axios from 'axios';
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import StaffLogin from './pages/StaffLogin';
+import StaffDashboard from './pages/StaffDashboard';
+import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 
-const API_URL = 'http://localhost:3001/api';
-const WS_URL = 'ws://localhost:3001';
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#00bfa5',
+      light: '#5df2d6',
+      dark: '#008e76',
+    },
+    secondary: {
+      main: '#64748b',
+    },
+    background: {
+      default: '#f8fafc',
+      paper: '#ffffff',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+  },
+  shape: {
+    borderRadius: 8,
+  },
+});
 
 function App() {
-  const [chats, setChats] = useState([]);
-  const [selectedChat, setSelectedChat] = useState(null);
-  const [ws, setWs] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [staffName, setStaffName] = useState('');
 
-  useEffect(() => {
-    loadChats();
-    const websocket = new WebSocket(WS_URL);
+  const handleLogin = (name) => {
+    setStaffName(name);
+    setIsAuthenticated(true);
+  };
 
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      if (data.type === 'chat') {
-        loadChats();
-      }
-
-      if (data.type === 'message' && selectedChat) {
-        if (data.record.chatParentID === selectedChat.id) {
-          setSelectedChat(prev => ({
-            ...prev,
-            needsRefresh: true
-          }));
-        }
-      }
-    };
-
-    setWs(websocket);
-
-    return () => {
-      websocket.close();
-    };
-  }, []);
-
-  const loadChats = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/chats`);
-      setChats(response.data);
-    } catch (error) {
-      console.error('Failed to load chats:', error);
-    }
+  const handleLogout = () => {
+    setStaffName('');
+    setIsAuthenticated(false);
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <AppBar position="static">
-        <Toolbar>
-          <ChatIcon sx={{ mr: 2 }} />
-          <Typography variant="h6">Live Chat Admin</Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <Paper
-          sx={{
-            width: 320,
-            borderRadius: 0,
-            borderRight: 1,
-            borderColor: 'divider',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Typography variant="h6">Active Chats</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {chats.length} conversation{chats.length !== 1 ? 's' : ''}
-            </Typography>
-          </Box>
-
-          <List sx={{ flex: 1, overflow: 'auto' }}>
-            {chats.map((chat) => (
-              <ListItem key={chat.id} disablePadding>
-                <ListItemButton
-                  selected={selectedChat?.id === chat.id}
-                  onClick={() => setSelectedChat(chat)}
-                >
-                  <ListItemText
-                    primary={chat.author || 'Anonymous'}
-                    secondary={
-                      chat.assignedStaff
-                        ? `Assigned to: ${chat.assignedStaff}`
-                        : 'Unassigned'
-                    }
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {selectedChat ? (
-            <ChatWindow chat={selectedChat} />
-          ) : (
-            <Box
-              sx={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'text.secondary'
-              }}
-            >
-              <Typography variant="h6">Select a chat to start</Typography>
-            </Box>
-          )}
-        </Box>
-      </Box>
-    </Box>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/staff"
+            element={
+              isAuthenticated ?
+                <Navigate to="/staff/dashboard" /> :
+                <StaffLogin onLogin={handleLogin} />
+            }
+          />
+          <Route
+            path="/staff/dashboard"
+            element={
+              isAuthenticated ?
+                <StaffDashboard staffName={staffName} onLogout={handleLogout} /> :
+                <Navigate to="/staff" />
+            }
+          />
+          <Route path="*" element={<Navigate to="/staff" />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

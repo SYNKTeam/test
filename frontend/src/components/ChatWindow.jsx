@@ -6,7 +6,8 @@ import {
   IconButton,
   Typography,
   Avatar,
-  Divider
+  Divider,
+  InputAdornment
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import PersonIcon from '@mui/icons-material/Person';
@@ -15,7 +16,7 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:3001/api';
 
-function ChatWindow({ chat }) {
+function ChatWindow({ chat, staffName }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
@@ -72,29 +73,41 @@ function ChatWindow({ chat }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Paper
+        elevation={0}
         sx={{
-          p: 2,
+          p: 3,
           borderRadius: 0,
-          borderBottom: 1,
-          borderColor: 'divider'
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'white'
         }}
       >
-        <Typography variant="h6">{chat.author || 'Anonymous'}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Chat ID: {chat.id}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar sx={{ bgcolor: 'secondary.main', width: 48, height: 48 }}>
+            {chat.author?.[0]?.toUpperCase() || 'A'}
+          </Avatar>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {chat.author || 'Anonymous User'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Active now
+            </Typography>
+          </Box>
+        </Box>
       </Paper>
 
       <Box
         sx={{
           flex: 1,
           overflow: 'auto',
-          p: 2,
-          backgroundColor: '#f5f5f5'
+          p: 3,
+          backgroundColor: '#ffffff'
         }}
       >
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const isStaff = message.author === 'staff';
+          const showAvatar = index === 0 || messages[index - 1].author !== message.author;
 
           return (
             <Box
@@ -110,41 +123,61 @@ function ChatWindow({ chat }) {
                   display: 'flex',
                   flexDirection: isStaff ? 'row-reverse' : 'row',
                   alignItems: 'flex-end',
-                  maxWidth: '70%'
+                  maxWidth: '65%'
                 }}
               >
-                <Avatar
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    mx: 1,
-                    bgcolor: isStaff ? 'primary.main' : 'secondary.main'
-                  }}
-                >
-                  {isStaff ? <SupportAgentIcon /> : <PersonIcon />}
-                </Avatar>
+                {showAvatar ? (
+                  <Avatar
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      mx: 1,
+                      bgcolor: isStaff ? 'primary.main' : 'secondary.main'
+                    }}
+                  >
+                    {isStaff ?
+                      <SupportAgentIcon fontSize="small" /> :
+                      <PersonIcon fontSize="small" />
+                    }
+                  </Avatar>
+                ) : (
+                  <Box sx={{ width: 32, mx: 1 }} />
+                )}
 
-                <Paper
-                  sx={{
-                    p: 1.5,
-                    backgroundColor: isStaff ? 'primary.main' : 'white',
-                    color: isStaff ? 'white' : 'text.primary',
-                    borderRadius: 2,
-                    wordBreak: 'break-word'
-                  }}
-                >
-                  <Typography variant="body1">{message.message}</Typography>
+                <Box>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 1.5,
+                      backgroundColor: isStaff ? 'primary.main' : '#f1f5f9',
+                      color: isStaff ? 'white' : 'text.primary',
+                      borderRadius: 2,
+                      wordBreak: 'break-word',
+                      border: '1px solid',
+                      borderColor: isStaff ? 'primary.main' : '#e2e8f0'
+                    }}
+                  >
+                    <Typography variant="body1" sx={{ fontSize: '0.95rem' }}>
+                      {message.message}
+                    </Typography>
+                  </Paper>
                   <Typography
                     variant="caption"
                     sx={{
                       display: 'block',
                       mt: 0.5,
-                      opacity: 0.8
+                      ml: isStaff ? 0 : 1,
+                      mr: isStaff ? 1 : 0,
+                      textAlign: isStaff ? 'right' : 'left',
+                      color: 'text.secondary'
                     }}
                   >
-                    {new Date(message.created).toLocaleTimeString()}
+                    {new Date(message.created).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </Typography>
-                </Paper>
+                </Box>
               </Box>
             </Box>
           );
@@ -153,34 +186,50 @@ function ChatWindow({ chat }) {
       </Box>
 
       <Paper
+        elevation={0}
         sx={{
           p: 2,
           borderRadius: 0,
-          borderTop: 1,
-          borderColor: 'divider'
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'white'
         }}
       >
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <TextField
-            fullWidth
-            multiline
-            maxRows={4}
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
-            variant="outlined"
-            size="small"
-          />
-          <IconButton
-            color="primary"
-            onClick={handleSend}
-            disabled={!newMessage.trim()}
-            sx={{ alignSelf: 'flex-end' }}
-          >
-            <SendIcon />
-          </IconButton>
-        </Box>
+        <TextField
+          fullWidth
+          multiline
+          maxRows={4}
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Type your message..."
+          variant="outlined"
+          size="small"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={handleSend}
+                  disabled={!newMessage.trim()}
+                  color="primary"
+                  sx={{
+                    '&:disabled': {
+                      opacity: 0.3
+                    }
+                  }}
+                >
+                  <SendIcon />
+                </IconButton>
+              </InputAdornment>
+            )
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              backgroundColor: '#f8fafc'
+            }
+          }}
+        />
       </Paper>
     </Box>
   );
