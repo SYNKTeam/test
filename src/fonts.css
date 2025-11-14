@@ -1,0 +1,10 @@
+/* Satoshi from Fontshare */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400,300&display=swap');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400,300&display=swap');

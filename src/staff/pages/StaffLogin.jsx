@@ -3,12 +3,13 @@ import {
   Box,
   Container,
   Paper,
-  TextField,
+  TextInput,
   Button,
-  Typography,
-  Avatar
-} from '@mui/material';
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+  Text,
+  Avatar,
+  Stack
+} from '@mantine/core';
+import { IconHeadset } from '@tabler/icons-react';
 
 function StaffLogin({ onLogin }) {
   const [name, setName] = useState('');
@@ -22,7 +23,7 @@ function StaffLogin({ onLogin }) {
 
   return (
     <Box
-      sx={{
+      style={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
@@ -30,63 +31,54 @@ function StaffLogin({ onLogin }) {
         backgroundColor: '#f8fafc'
       }}
     >
-      <Container maxWidth="sm">
+      <Container size="sm">
         <Paper
-          elevation={0}
-          sx={{
-            p: 6,
+          p="xl"
+          style={{
             textAlign: 'center',
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 2
+            border: '1px solid #e9ecef',
           }}
         >
-          <Avatar
-            sx={{
-              width: 80,
-              height: 80,
-              margin: '0 auto 24px',
-              bgcolor: 'primary.main'
-            }}
-          >
-            <SupportAgentIcon sx={{ fontSize: 48 }} />
-          </Avatar>
-
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-            Staff Login
-          </Typography>
-
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            Enter your name to access the support dashboard
-          </Typography>
-
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
-              variant="outlined"
-              autoFocus
-              sx={{ mb: 3 }}
-            />
-
-            <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={!name.trim()}
-              sx={{
-                py: 1.5,
-                textTransform: 'none',
-                fontSize: '1rem',
-                fontWeight: 600
-              }}
+          <Stack align="center" gap="lg">
+            <Avatar
+              size={80}
+              color="teal"
             >
-              Access Dashboard
-            </Button>
-          </form>
+              <IconHeadset size={48} />
+            </Avatar>
+
+            <div>
+              <Text size="xl" fw={600} mb="xs">
+                Staff Login
+              </Text>
+
+              <Text c="dimmed" mb="xl">
+                Enter your name to access the support dashboard
+              </Text>
+            </div>
+
+            <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+              <Stack gap="md">
+                <TextInput
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  size="md"
+                  autoFocus
+                />
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  size="lg"
+                  disabled={!name.trim()}
+                  color="teal"
+                >
+                  Access Dashboard
+                </Button>
+              </Stack>
+            </form>
+          </Stack>
         </Paper>
       </Container>
     </Box>

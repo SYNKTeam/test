@@ -1,8 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import ChatWidget from './ChatWidget';
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { MantineProvider } from '@mantine/core';
 import { theme } from '../theme';
+import '../fonts.css';
+import '@mantine/core/styles.css';
 
 const container = document.getElementById('livechat-widget');
 if (container) {
@@ -14,10 +16,9 @@ if (container) {
 
   ReactDOM.createRoot(container).render(
     <React.StrictMode>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+      <MantineProvider theme={theme}>
         <ChatWidget apiUrl={apiUrl} wsUrl={wsUrl} />
-      </ThemeProvider>
+      </MantineProvider>
     </React.StrictMode>
   );
 }
