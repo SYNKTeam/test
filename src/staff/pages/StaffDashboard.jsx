@@ -72,19 +72,29 @@ function StaffDashboard({ staffUser, onLogout }) {
   };
 
   const handleSelectChat = async (chat) => {
-    setSelectedChat(chat);
-
     // Auto-assign staff if not already assigned
     if (!chat.assignedStaff || chat.assignedStaff === '') {
       try {
-        await axios.post(`${API_URL}/chats/${chat.id}/assign`, {
+        console.log('Auto-assigning staff to chat:', chat.id);
+        const response = await axios.post(`${API_URL}/chats/${chat.id}/assign`, {
           staffName: staffName
         });
-        // Reload chats to update the assignment
-        loadChats();
+        console.log('Assignment response:', response.data);
+
+        // Update the chat locally with the assignment
+        const updatedChat = { ...chat, assignedStaff: staffName };
+        setSelectedChat(updatedChat);
+
+        // Update the chats list
+        setChats(prevChats =>
+          prevChats.map(c => c.id === chat.id ? updatedChat : c)
+        );
       } catch (error) {
         console.error('Failed to assign staff:', error);
+        setSelectedChat(chat);
       }
+    } else {
+      setSelectedChat(chat);
     }
   };
 

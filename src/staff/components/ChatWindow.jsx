@@ -18,6 +18,7 @@ import {
   IconHeadset,
   IconCheck,
   IconChecks,
+  IconRobot,
 } from '@tabler/icons-react';
 import axios from 'axios';
 
@@ -197,28 +198,34 @@ function ChatWindow({ chat, staffName }) {
       >
         {messages.map((message, index) => {
           const isStaff = message.author === 'staff';
-          const isSystem = message.author === 'system';
+          const isAI = message.author === 'ai';
           const showAvatar = index === 0 || messages[index - 1].author !== message.author;
 
-          // System messages (centered)
-          if (isSystem) {
+          // AI messages (centered with robot icon)
+          if (isAI) {
             return (
               <Box key={message.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                <Paper
-                  p="xs"
-                  style={{
-                    backgroundColor: '#e3f2fd',
-                    color: '#1565c0',
-                    borderRadius: '8px',
-                    maxWidth: '80%',
-                    border: '1px solid #90caf9'
-                  }}
-                  shadow="none"
-                >
-                  <Text size="xs" ta="center" style={{ lineHeight: 1.5 }}>
-                    {message.message}
-                  </Text>
-                </Paper>
+                <Group gap="sm">
+                  <Avatar size={24} color="violet" variant="filled">
+                    <IconRobot size={14} />
+                  </Avatar>
+                  <Paper
+                    p="xs"
+                    px="md"
+                    style={{
+                      backgroundColor: '#f3e5f5',
+                      color: '#6a1b9a',
+                      borderRadius: '16px',
+                      border: '1px solid #ce93d8',
+                      boxShadow: '0 2px 8px rgba(106, 27, 154, 0.1)'
+                    }}
+                    shadow="none"
+                  >
+                    <Text size="xs" style={{ lineHeight: 1.6, fontWeight: 500 }}>
+                      {message.message}
+                    </Text>
+                  </Paper>
+                </Group>
               </Box>
             );
           }
