@@ -18,6 +18,8 @@ import SendIcon from '@mui/icons-material/Send';
 import PersonIcon from '@mui/icons-material/Person';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import MinimizeIcon from '@mui/icons-material/Minimize';
+import CheckIcon from '@mui/icons-material/Check';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
 import axios from 'axios';
 
 function ChatWidget({ apiUrl, wsUrl }) {
@@ -51,9 +53,17 @@ function ChatWidget({ apiUrl, wsUrl }) {
         if (data.record.chatParentID === chatId) {
           setMessages(prev => {
             const exists = prev.some(m => m.id === data.record.id);
-            if (exists) return prev;
+            if (exists) {
+              // Update existing message (e.g., read status changed)
+              return prev.map(m => m.id === data.record.id ? data.record : m);
+            }
             return [...prev, data.record];
           });
+
+          // Mark staff messages as read automatically when received
+          if (data.record.author === 'staff' && !data.record.read) {
+            markAsRead(data.record.id);
+          }
         }
       }
     };
@@ -64,6 +74,25 @@ function ChatWidget({ apiUrl, wsUrl }) {
       websocket.close();
     };
   }, [isOpen, hasJoined, chatId, wsUrl]);
+
+  // Mark messages as read when the chat opens and messages load
+  useEffect(() => {
+    if (messages.length > 0 && isOpen) {
+      messages.forEach(message => {
+        if (message.author === 'staff' && !message.read) {
+          markAsRead(message.id);
+        }
+      });
+    }
+  }, [messages, isOpen]);
+
+  const markAsRead = async (messageId) => {
+    try {
+      await axios.patch(`${apiUrl}/messages/${messageId}/read`);
+    } catch (error) {
+      console.error('Failed to mark message as read:', error);
+    }
+  };
 
   const handleJoin = async () => {
     if (!username.trim()) return;
@@ -317,23 +346,37 @@ function ChatWidget({ apiUrl, wsUrl }) {
                                 {message.message}
                               </Typography>
                             </Paper>
-                            <Typography
-                              variant="caption"
+                            <Box
                               sx={{
-                                display: 'block',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: isStaff ? 'flex-start' : 'flex-end',
+                                gap: 0.5,
                                 mt: 0.5,
                                 ml: isStaff ? 0.5 : 0,
-                                mr: isStaff ? 0 : 0.5,
-                                textAlign: isStaff ? 'left' : 'right',
-                                color: '#64748b',
-                                fontSize: '0.7rem'
+                                mr: isStaff ? 0 : 0.5
                               }}
                             >
-                              {new Date(message.created).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: '#64748b',
+                                  fontSize: '0.7rem'
+                                }}
+                              >
+                                {new Date(message.created).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </Typography>
+                              {!isStaff && (
+                                message.read ? (
+                                  <DoneAllIcon sx={{ fontSize: 14, color: '#00bfa5' }} />
+                                ) : message.sent ? (
+                                  <CheckIcon sx={{ fontSize: 14, color: '#64748b' }} />
+                                ) : null
+                              )}
+                            </Box>
                           </Box>
                         </Box>
                       </Box>
