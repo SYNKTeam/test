@@ -130,16 +130,16 @@ app.post('/api/chats', async (req, res) => {
     const chat = await pb.collection('chats').create(req.body);
     console.log('Chat created:', chat.id);
 
-    // Send welcome message
-    await authenticatePB(); // Ensure still authenticated
-    await pb.collection('liveChatMessages').create({
+    // Send welcome message immediately
+    await authenticatePB();
+    const welcomeMessage = await pb.collection('liveChatMessages').create({
       message: `Hi ${req.body.author}! 👋 Welcome to our support chat. How can we help you today?`,
-      author: 'system',
+      author: 'ai',
       chatParentID: chat.id,
       sent: true,
       read: false
     });
-    console.log('Welcome message sent');
+    console.log('Welcome message sent:', welcomeMessage.id);
 
     res.json(chat);
   } catch (error) {
@@ -239,19 +239,23 @@ app.post('/api/chats/:id/assign', async (req, res) => {
   try {
     await authenticatePB();
     const { staffName } = req.body;
+    console.log(`Assigning ${staffName} to chat ${req.params.id}`);
+
     const chat = await pb.collection('chats').update(req.params.id, {
       assignedStaff: staffName
     });
+    console.log('Chat updated with assignment:', chat.assignedStaff);
 
-    // Send system message
-    await authenticatePB(); // Ensure still authenticated
-    await pb.collection('liveChatMessages').create({
-      message: `${staffName} has been assigned to your chat and will assist you shortly.`,
-      author: 'system',
+    // Send AI notification message
+    await authenticatePB();
+    const notification = await pb.collection('liveChatMessages').create({
+      message: `${staffName} has joined the chat and will assist you.`,
+      author: 'ai',
       chatParentID: req.params.id,
       sent: true,
       read: false
     });
+    console.log('Assignment notification sent:', notification.id);
 
     res.json(chat);
   } catch (error) {
