@@ -32,15 +32,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const pb = new PocketBase(POCKETBASE_URL);
 
-let isAuthenticated = false;
-
 const authenticatePB = async () => {
-  if (!isAuthenticated) {
+  try {
+    // Always authenticate to ensure we have a valid token
+    // PocketBase SDK will handle token caching automatically
     await pb.collection('_superusers').authWithPassword(
       POCKETBASE_EMAIL,
       POCKETBASE_PASSWORD
     );
-    isAuthenticated = true;
+  } catch (error) {
+    console.error('PocketBase authentication failed:', error);
+    throw error;
   }
 };
 
@@ -127,9 +129,12 @@ app.get('/api/users/:id', async (req, res) => {
 app.post('/api/chats', async (req, res) => {
   try {
     await authenticatePB();
+    console.log('Creating chat with data:', req.body);
     const chat = await pb.collection('chats').create(req.body);
+    console.log('Chat created:', chat.id);
 
     // Send welcome message
+    await authenticatePB(); // Ensure still authenticated
     await pb.collection('liveChatMessages').create({
       message: `Hi ${req.body.author}! 👋 Welcome to our support chat. How can we help you today?`,
       author: 'system',
@@ -137,9 +142,11 @@ app.post('/api/chats', async (req, res) => {
       sent: true,
       read: false
     });
+    console.log('Welcome message sent');
 
     res.json(chat);
   } catch (error) {
+    console.error('Chat creation error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -240,6 +247,7 @@ app.post('/api/chats/:id/assign', async (req, res) => {
     });
 
     // Send system message
+    await authenticatePB(); // Ensure still authenticated
     await pb.collection('liveChatMessages').create({
       message: `${staffName} has been assigned to your chat and will assist you shortly.`,
       author: 'system',
@@ -250,6 +258,7 @@ app.post('/api/chats/:id/assign', async (req, res) => {
 
     res.json(chat);
   } catch (error) {
+    console.error('Chat assignment error:', error);
     res.status(500).json({ error: error.message });
   }
 });
