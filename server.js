@@ -2,22 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import PocketBase from 'pocketbase';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { EventSource } from 'eventsource';
+import EventSource from 'eventsource';
 
 global.EventSource = EventSource;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
-
-const POCKETBASE_URL = process.env.POCKETBASE_URL || 'http://192.168.0.52:8091';
-const POCKETBASE_EMAIL = process.env.POCKETBASE_EMAIL || 'root@synkradio.co.uk';
-const POCKETBASE_PASSWORD = process.env.POCKETBASE_PASSWORD || 'CantGetMeNow#13';
+const POCKETBASE_URL = 'http://192.168.0.52:8091';
+const POCKETBASE_EMAIL = 'root@synkradio.co.uk';
+const POCKETBASE_PASSWORD = 'CantGetMeNow#13';
 
 console.log('PocketBase URL:', POCKETBASE_URL);
 
