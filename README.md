@@ -1,0 +1,78 @@
+# Live Chat Product
+
+A real-time live chat support system built with React, PocketBase, and Material-UI.
+
+## Features
+
+- Real-time messaging with WebSocket support
+- Admin dashboard for managing conversations
+- Embeddable chat widget for websites
+- Material-UI design
+- PocketBase backend integration
+
+## Project Structure
+
+```
+.
+├── backend/          # Express API server (PocketBase wrapper)
+├── frontend/         # Admin dashboard (React + Material-UI)
+└── widget/          # Embeddable chat widget (React + Material-UI)
+```
+
+## Setup
+
+### Backend
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+Server runs on http://localhost:3001
+
+### Admin Dashboard
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Dashboard runs on http://localhost:3000
+
+### Chat Widget
+
+```bash
+cd widget
+npm install
+npm run dev
+```
+
+Widget demo runs on http://localhost:3002
+
+## PocketBase Configuration
+
+The backend connects to PocketBase at: http://192.168.0.52:8091
+
+Collections used:
+- `chats` - Chat sessions
+- `liveChatUsers` - User management
+- `liveChatMessages` - Messages
+
+## Usage
+
+1. Start the backend server
+2. Start the admin dashboard
+3. Start the widget (for testing)
+4. Open the widget demo page and start chatting
+5. View and respond to chats in the admin dashboard
+
+## Embedding the Widget
+
+To embed the chat widget on your website:
+
+```html
+<div id="livechat-widget"></div>
+<script type="module" src="http://localhost:3002/livechat-widget.js"></script>
+```
