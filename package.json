@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "dev": "concurrently \"npm run dev:staff\" \"npm run dev:widget\"",
     "dev:staff": "cd src/staff && vite",
     "dev:widget": "cd src/widget && vite",
+    "prod": "node server.js",
     "build:staff": "cd src/staff && vite build",
     "build:widget": "cd src/widget && vite build",
     "build": "npm run build:staff && npm run build:widget"
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^5.1.1"
+    "vite": "^5.1.1",
+    "concurrently": "^8.2.2"
   }
 }
