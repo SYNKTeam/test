@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { EventSource } from 'eventsource';
+
+global.EventSource = EventSource;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +36,7 @@ let isAuthenticated = false;
 
 const authenticatePB = async () => {
   if (!isAuthenticated) {
-    await pb.admins.authWithPassword(
+    await pb.collection('_superusers').authWithPassword(
       POCKETBASE_EMAIL,
       POCKETBASE_PASSWORD
     );
