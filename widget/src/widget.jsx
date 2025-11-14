@@ -5,10 +5,13 @@ import { CssBaseline } from '@mui/material';
 
 const container = document.getElementById('livechat-widget');
 if (container) {
+  const apiUrl = '/api';
+  const wsUrl = `ws://${window.location.host}`;
+
   ReactDOM.createRoot(container).render(
     <React.StrictMode>
       <CssBaseline />
-      <ChatWidget apiUrl="http://localhost:3001/api" wsUrl="ws://localhost:3001" />
+      <ChatWidget apiUrl={apiUrl} wsUrl={wsUrl} />
     </React.StrictMode>
   );
 }

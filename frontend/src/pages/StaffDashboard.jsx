@@ -19,8 +19,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import ChatWindow from '../components/ChatWindow';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api';
-const WS_URL = 'ws://localhost:3001';
+const API_URL = '/api';
+const WS_URL = `ws://${window.location.host}`;
 
 function StaffDashboard({ staffName, onLogout }) {
   const [chats, setChats] = useState([]);

@@ -3,15 +3,19 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 3002
-  },
+  base: '/',
   build: {
+    outDir: '../backend/public',
+    emptyOutDir: false,
     rollupOptions: {
       output: {
-        entryFileNames: 'livechat-widget.js',
-        assetFileNames: 'livechat-widget.[ext]'
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]'
       }
     }
+  },
+  server: {
+    port: 3002
   }
 });

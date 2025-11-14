@@ -4,6 +4,7 @@ A professional real-time live chat support system built with React, PocketBase, 
 
 ## Features
 
+- **Single Server Architecture** - Everything runs on one server
 - Real-time messaging with WebSocket support
 - Staff dashboard with authentication for managing conversations
 - Embeddable chat widget for websites
@@ -16,62 +17,76 @@ A professional real-time live chat support system built with React, PocketBase, 
 
 ```
 .
-├── backend/          # Express API server (PocketBase wrapper)
-├── frontend/         # Admin dashboard (React + Material-UI)
-└── widget/          # Embeddable chat widget (React + Material-UI)
+├── backend/          # Express server + static files
+│   ├── server.js     # Main server (API + static file serving)
+│   ├── public/       # Built frontend files
+│   │   ├── index.html       # Widget demo (/)
+│   │   └── staff/           # Staff panel (/staff)
+│   └── .env          # PocketBase credentials
+├── frontend/         # Staff dashboard source (React + Material-UI)
+└── widget/           # Chat widget source (React + Material-UI)
 ```
 
-## Setup
+## Quick Start
 
-### Backend
+### Installation
 
 ```bash
 cd backend
 npm install
-npm start
 ```
 
-Server runs on http://localhost:3001
-
-### Staff Dashboard
+### Build Frontend Apps
 
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run build
+
+cd ../widget
+npm install
+npm run build
 ```
 
-Dashboard runs on http://localhost:3000
-
-Access the staff login at: http://localhost:3000/staff
-
-### Chat Widget
+### Start Server
 
 ```bash
-cd widget
-npm install
-npm run dev
+cd backend
+npm start
 ```
 
-Widget demo runs on http://localhost:3002
+Server runs on **http://localhost:3000**
+
+## Routes
+
+- `/` - Widget demo page
+- `/staff` - Staff dashboard (login required)
+- `/api` - Backend API endpoints
+
+## Usage
+
+1. Start the server: `cd backend && npm start`
+2. Visit **http://localhost:3000** to see the widget demo
+3. Visit **http://localhost:3000/staff** to access the staff panel
+4. Enter your name to log in as staff
+5. Start a chat from the widget demo
+6. Respond to chats in real-time from the staff dashboard
 
 ## PocketBase Configuration
 
-The backend connects to PocketBase at: http://192.168.0.52:8091
+The backend connects to PocketBase. Configure in `backend/.env`:
+
+```env
+POCKETBASE_URL=http://192.168.0.52:8091
+POCKETBASE_EMAIL=your@email.com
+POCKETBASE_PASSWORD=yourpassword
+PORT=3000
+```
 
 Collections used:
 - `chats` - Chat sessions
 - `liveChatUsers` - User management
 - `liveChatMessages` - Messages
-
-## Usage
-
-1. Start the backend server
-2. Start the staff dashboard
-3. Start the widget (for testing)
-4. Open http://localhost:3000/staff and enter your name to access the dashboard
-5. Open the widget demo at http://localhost:3002 and start a chat
-6. View and respond to chats in real-time from the staff dashboard
 
 ## Design
 
@@ -82,11 +97,20 @@ The interface features a clean, professional design inspired by tawk.to:
 - Professional typography
 - Smooth animations and transitions
 
-## Embedding the Widget
+## Development
 
-To embed the chat widget on your website:
+To develop with hot reload:
 
-```html
-<div id="livechat-widget"></div>
-<script type="module" src="http://localhost:3002/livechat-widget.js"></script>
+```bash
+cd frontend
+npm run dev
 ```
+
+Then in another terminal:
+
+```bash
+cd widget
+npm run dev
+```
+
+This runs the frontends on separate dev servers. For production, always build and use the single backend server.

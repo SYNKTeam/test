@@ -4,6 +4,11 @@ import { WebSocketServer } from 'ws';
 import PocketBase from 'pocketbase';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -13,6 +18,8 @@ const wss = new WebSocketServer({ server });
 
 app.use(cors());
 app.use(express.json());
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 const pb = new PocketBase(process.env.POCKETBASE_URL);
 
@@ -166,7 +173,11 @@ app.patch('/api/messages/:id/read', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+app.get('/staff/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'staff', 'index.html'));
+});
+
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`WebSocket server running`);
