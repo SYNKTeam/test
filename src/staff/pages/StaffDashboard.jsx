@@ -1,18 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  AppShell,
-  Box,
-  Paper,
-  Text,
-  Avatar,
-  Badge,
-  ActionIcon,
-  Group,
-  Stack,
-  ScrollArea,
-  UnstyledButton,
-} from '@mantine/core';
-import {
   IconMessage,
   IconLogout,
   IconUser,
@@ -22,49 +9,82 @@ import ChatWindow from '../components/ChatWindow';
 import axios from 'axios';
 
 const API_URL = '/api';
-const isDev = import.meta.env.DEV;
-const WS_URL = isDev ? 'ws://localhost:3001' : `ws://${window.location.host}`;
 
-function StaffDashboard({ staffUser, onLogout }) {
+export default function StaffDashboard({ staffUser, onLogout, wsUrl }) {
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [ws, setWs] = useState(null);
+  const [error, setError] = useState(null);
   const staffName = staffUser?.name || staffUser?.email || 'Staff';
+
+  const isDev = import.meta.env.DEV;
+  const WS_URL = wsUrl || (isDev ? 'ws://localhost:5173/ws' : `ws://${window.location.host}/ws`);
 
   useEffect(() => {
     loadChats();
-    const websocket = new WebSocket(WS_URL);
-
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      if (data.type === 'chat') {
-        loadChats();
-      }
-
-      if (data.type === 'message') {
-        setSelectedChat(prev => {
-          if (prev && data.record.chatParentID === prev.id) {
-            return { ...prev, needsRefresh: true };
-          }
-          return prev;
-        });
-      }
-    };
-
-    setWs(websocket);
+    connectWebSocket();
 
     return () => {
-      websocket.close();
+      if (ws) {
+        ws.close();
+      }
     };
   }, []);
+
+  const connectWebSocket = () => {
+    try {
+      const websocket = new WebSocket(WS_URL);
+
+      websocket.onopen = () => {
+        console.log('[StaffDashboard] WebSocket connected');
+        setError(null);
+      };
+
+      websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === 'chat') {
+            loadChats();
+          }
+
+          if (data.type === 'message') {
+            setSelectedChat(prev => {
+              if (prev && data.record.chatParentID === prev.id) {
+                return { ...prev, needsRefresh: true };
+              }
+              return prev;
+            });
+          }
+        } catch (error) {
+          console.error('[StaffDashboard] Message parse error:', error);
+        }
+      };
+
+      websocket.onerror = (error) => {
+        console.error('[StaffDashboard] WebSocket error:', error);
+        setError('Connection error. Retrying...');
+      };
+
+      websocket.onclose = () => {
+        console.log('[StaffDashboard] WebSocket closed, reconnecting in 3s...');
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      setWs(websocket);
+    } catch (error) {
+      console.error('[StaffDashboard] WebSocket connection error:', error);
+      setError('Failed to connect to server');
+    }
+  };
 
   const loadChats = async () => {
     try {
       const response = await axios.get(`${API_URL}/chats`);
       setChats(response.data);
     } catch (error) {
-      console.error('Failed to load chats:', error);
+      console.error('[StaffDashboard] Failed to load chats:', error);
+      setError('Failed to load chats');
     }
   };
 
@@ -72,11 +92,11 @@ function StaffDashboard({ staffUser, onLogout }) {
     // Auto-assign staff if chat is unassigned or assigned to AI
     if (!chat.assignedStaff || chat.assignedStaff === 'ai' || chat.assignedStaff === '') {
       try {
-        console.log('Auto-assigning staff to chat:', chat.id);
+        console.log('[StaffDashboard] Auto-assigning staff to chat:', chat.id);
         const response = await axios.post(`${API_URL}/chats/${chat.id}/assign`, {
           staffName: staffName
         });
-        console.log('Assignment response:', response.data);
+        console.log('[StaffDashboard] Assignment response:', response.data);
 
         const updatedChat = { ...chat, assignedStaff: staffName };
         setSelectedChat(updatedChat);
@@ -85,7 +105,7 @@ function StaffDashboard({ staffUser, onLogout }) {
           prevChats.map(c => c.id === chat.id ? updatedChat : c)
         );
       } catch (error) {
-        console.error('Failed to assign staff:', error);
+        console.error('[StaffDashboard] Failed to assign staff:', error);
         setSelectedChat(chat);
       }
     } else {
@@ -94,222 +114,143 @@ function StaffDashboard({ staffUser, onLogout }) {
   };
 
   return (
-    <AppShell
-      header={{ height: 64 }}
-      navbar={{ width: 320, breakpoint: 'sm' }}
-      padding={0}
-    >
-      <AppShell.Header>
-        <Box
-          style={{
-            height: '100%',
-            padding: '0 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid #e5e7eb',
-            background: 'white',
-          }}
-        >
-          <Group gap="sm">
-            <Avatar
-              size={36}
-              radius="xl"
-              style={{
-                background: '#111827',
-                color: 'white',
-              }}
-            >
-              <IconMessage size={20} />
-            </Avatar>
-            <Text fw={600} size="md" c="#111827">
-              Support Dashboard
-            </Text>
-          </Group>
-          <Group gap="sm">
-            <Text size="sm" c="#6b7280">
-              {staffName}
-            </Text>
-            <ActionIcon
-              onClick={onLogout}
-              variant="subtle"
-              c="#6b7280"
-              size="md"
-            >
-              <IconLogout size={18} />
-            </ActionIcon>
-          </Group>
-        </Box>
-      </AppShell.Header>
-
-      <AppShell.Navbar>
-        <Box
-          p="md"
-          style={{
-            borderBottom: '1px solid #e5e7eb',
-            background: 'white',
-          }}
-        >
-          <Group justify="space-between">
-            <Text size="sm" fw={600} c="#111827">
-              Escalated Chats
-            </Text>
-            <Badge
-              size="sm"
-              variant="filled"
-              color="#111827"
-              style={{
-                background: '#111827',
-              }}
-            >
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-900">Escalated Chats</h2>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-semibold rounded-full bg-gray-900 text-white">
               {chats.length}
-            </Badge>
-          </Group>
-        </Box>
+            </span>
+          </div>
+        </div>
 
-        <ScrollArea style={{ flex: 1, background: '#fafafa' }} p="xs">
-          <Stack gap="xs">
-            {chats.length === 0 ? (
-              <Stack align="center" gap="sm" py="xl" px="md">
-                <Avatar
-                  size={48}
-                  radius="xl"
-                  style={{
-                    background: '#f3f4f6',
-                    color: '#9ca3af',
-                  }}
-                >
-                  <IconMessage size={24} />
-                </Avatar>
-                <Stack gap={4} align="center">
-                  <Text size="sm" fw={500} c="#6b7280" ta="center">
-                    No escalated chats
-                  </Text>
-                  <Text size="xs" c="#9ca3af" ta="center">
-                    AI is handling all conversations
-                  </Text>
-                </Stack>
-              </Stack>
-            ) : (
-              chats.map((chat) => {
+        {/* Chats List */}
+        <div className="flex-1 overflow-y-auto">
+          {chats.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                <IconMessage className="text-gray-400" size={24} />
+              </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">
+                No escalated chats
+              </p>
+              <p className="text-xs text-gray-400">
+                AI is handling all conversations
+              </p>
+            </div>
+          ) : (
+            <div className="p-2 space-y-1">
+              {chats.map((chat) => {
                 const isSelected = selectedChat?.id === chat.id;
                 const isAssignedToMe = chat.assignedStaff === staffName;
                 const isUnassigned = !chat.assignedStaff || chat.assignedStaff === 'ai' || chat.assignedStaff === '';
 
                 return (
-                  <UnstyledButton
+                  <button
                     key={chat.id}
                     onClick={() => handleSelectChat(chat)}
-                    style={{
-                      padding: '12px',
-                      borderRadius: '8px',
-                      background: isSelected ? '#111827' : 'white',
-                      color: isSelected ? 'white' : 'inherit',
-                      border: isSelected ? 'none' : '1px solid #e5e7eb',
-                    }}
+                    className={`w-full p-3 rounded-lg text-left transition-all ${
+                      isSelected
+                        ? 'bg-gray-900 text-white'
+                        : 'bg-white hover:bg-gray-50 border border-gray-200'
+                    }`}
                   >
-                    <Group gap="sm" wrap="nowrap">
-                      <Avatar
-                        size={40}
-                        radius="xl"
-                        style={{
-                          background: isSelected ? 'rgba(255,255,255,0.15)' : '#f3f4f6',
-                          color: isSelected ? 'white' : '#6b7280',
-                          fontWeight: 600,
-                        }}
-                      >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                        isSelected
+                          ? 'bg-white/20 text-white'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
                         {chat.author?.[0]?.toUpperCase() || 'A'}
-                      </Avatar>
-                      <Box style={{ flex: 1, minWidth: 0 }}>
-                        <Text
-                          fw={600}
-                          size="sm"
-                          style={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            color: isSelected ? 'white' : '#111827',
-                          }}
-                        >
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold truncate ${
+                          isSelected ? 'text-white' : 'text-gray-900'
+                        }`}>
                           {chat.author || 'Anonymous User'}
-                        </Text>
+                        </p>
                         {isUnassigned ? (
-                          <Badge
-                            size="xs"
-                            variant="filled"
-                            color={isSelected ? 'white' : '#ef4444'}
-                            style={{
-                              background: isSelected ? 'rgba(255,255,255,0.2)' : '#ef4444',
-                              color: isSelected ? 'white' : 'white',
-                              marginTop: 4,
-                            }}
-                          >
+                          <span className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1 ${
+                            isSelected
+                              ? 'bg-white/20 text-white'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
                             Unassigned
-                          </Badge>
+                          </span>
                         ) : isAssignedToMe ? (
-                          <Badge
-                            size="xs"
-                            variant="filled"
-                            color={isSelected ? 'white' : '#10b981'}
-                            style={{
-                              background: isSelected ? 'rgba(255,255,255,0.2)' : '#10b981',
-                              color: 'white',
-                              marginTop: 4,
-                            }}
-                          >
+                          <span className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1 ${
+                            isSelected
+                              ? 'bg-white/20 text-white'
+                              : 'bg-green-100 text-green-700'
+                          }`}>
                             You
-                          </Badge>
+                          </span>
                         ) : (
-                          <Text size="xs" c={isSelected ? 'rgba(255,255,255,0.7)' : '#9ca3af'} mt={2}>
+                          <p className={`text-xs mt-1 ${
+                            isSelected ? 'text-white/70' : 'text-gray-500'
+                          }`}>
                             {chat.assignedStaff}
-                          </Text>
+                          </p>
                         )}
-                      </Box>
-                    </Group>
-                  </UnstyledButton>
+                      </div>
+                    </div>
+                  </button>
                 );
-              })
-            )}
-          </Stack>
-        </ScrollArea>
-      </AppShell.Navbar>
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
-      <AppShell.Main>
-        {selectedChat ? (
-          <ChatWindow chat={selectedChat} staffName={staffName} />
-        ) : (
-          <Stack
-            align="center"
-            justify="center"
-            gap="md"
-            style={{
-              height: '100%',
-              background: '#fafafa',
-            }}
-          >
-            <Avatar
-              size={80}
-              radius="xl"
-              style={{
-                background: '#f3f4f6',
-                color: '#9ca3af',
-              }}
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center">
+              <IconMessage className="text-white" size={20} />
+            </div>
+            <h1 className="text-base font-semibold text-gray-900">
+              Support Dashboard
+            </h1>
+          </div>
+          <div className="flex items-center gap-4">
+            {error && (
+              <span className="text-sm text-red-600">{error}</span>
+            )}
+            <span className="text-sm text-gray-600">{staffName}</span>
+            <button
+              onClick={onLogout}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
+              title="Logout"
             >
-              <IconMessage size={40} />
-            </Avatar>
-            <Stack gap={4} align="center">
-              <Text size="lg" fw={600} c="#111827">
+              <IconLogout size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Chat Window or Empty State */}
+        <div className="flex-1 overflow-hidden">
+          {selectedChat ? (
+            <ChatWindow chat={selectedChat} staffName={staffName} wsUrl={WS_URL} />
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center bg-gray-50">
+              <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                <IconMessage className="text-gray-400" size={40} />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Select a conversation
-              </Text>
-              <Text size="sm" c="#6b7280" ta="center" maw={280}>
+              </h3>
+              <p className="text-sm text-gray-600 max-w-xs text-center">
                 Choose a chat from the sidebar to start helping
-              </Text>
-            </Stack>
-          </Stack>
-        )}
-      </AppShell.Main>
-    </AppShell>
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
-
-export default StaffDashboard;

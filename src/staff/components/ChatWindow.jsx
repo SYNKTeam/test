@@ -1,16 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Box,
-  Paper,
-  Textarea,
-  ActionIcon,
-  Text,
-  Avatar,
-  Transition,
-  Group,
-  ScrollArea,
-} from '@mantine/core';
-import {
   IconSend,
   IconUser,
   IconCheck,
@@ -20,16 +9,18 @@ import {
 import axios from 'axios';
 
 const API_URL = '/api';
-const isDev = import.meta.env.DEV;
-const WS_URL = isDev ? 'ws://localhost:3001' : `ws://${window.location.host}`;
 
-function ChatWindow({ chat, staffName }) {
+export default function ChatWindow({ chat, staffName, wsUrl }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [ws, setWs] = useState(null);
+  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  const isDev = import.meta.env.DEV;
+  const WS_URL = wsUrl || (isDev ? 'ws://localhost:5173/ws' : `ws://${window.location.host}/ws`);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,28 +37,46 @@ function ChatWindow({ chat, staffName }) {
   useEffect(() => {
     const websocket = new WebSocket(WS_URL);
 
+    websocket.onopen = () => {
+      console.log('[ChatWindow] WebSocket connected');
+      setError(null);
+    };
+
     websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      try {
+        const data = JSON.parse(event.data);
 
-      if (data.type === 'message' && data.record.chatParentID === chat.id) {
-        setMessages(prev => {
-          const exists = prev.some(m => m.id === data.record.id);
-          if (exists) {
-            return prev.map(m => m.id === data.record.id ? { ...data.record } : m);
+        if (data.type === 'message' && data.record.chatParentID === chat.id) {
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === data.record.id);
+            if (exists) {
+              return prev.map(m => m.id === data.record.id ? { ...data.record } : m);
+            }
+            return [...prev, data.record];
+          });
+
+          if (data.record.author !== 'staff' && !data.record.read && document.hasFocus()) {
+            markAsRead(data.record.id);
           }
-          return [...prev, data.record];
-        });
-
-        if (data.record.author !== 'staff' && !data.record.read && document.hasFocus()) {
-          markAsRead(data.record.id);
         }
-      }
 
-      if (data.type === 'typing' && data.chatId === chat.id) {
-        if (data.author !== 'staff') {
-          setIsTyping(data.isTyping);
+        if (data.type === 'typing' && data.chatId === chat.id) {
+          if (data.author !== 'staff') {
+            setIsTyping(data.isTyping);
+          }
         }
+      } catch (error) {
+        console.error('[ChatWindow] Message parse error:', error);
       }
+    };
+
+    websocket.onerror = (error) => {
+      console.error('[ChatWindow] WebSocket error:', error);
+      setError('Connection error');
+    };
+
+    websocket.onclose = () => {
+      console.log('[ChatWindow] WebSocket closed');
     };
 
     setWs(websocket);
@@ -88,7 +97,8 @@ function ChatWindow({ chat, staffName }) {
         }
       });
     } catch (error) {
-      console.error('Failed to load messages:', error);
+      console.error('[ChatWindow] Failed to load messages:', error);
+      setError('Failed to load messages');
     }
   };
 
@@ -98,7 +108,7 @@ function ChatWindow({ chat, staffName }) {
     try {
       await axios.patch(`${API_URL}/messages/${messageId}/read`);
     } catch (error) {
-      console.error('Failed to mark message as read:', error);
+      console.error('[ChatWindow] Failed to mark message as read:', error);
     }
   };
 
@@ -123,7 +133,8 @@ function ChatWindow({ chat, staffName }) {
         }));
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('[ChatWindow] Failed to send message:', error);
+      setError('Failed to send message');
     }
   };
 
@@ -166,266 +177,146 @@ function ChatWindow({ chat, staffName }) {
   };
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box
-        p="md"
-        style={{
-          borderBottom: '1px solid #e5e7eb',
-          background: 'white',
-        }}
-      >
-        <Group gap="sm">
-          <Avatar
-            size={40}
-            radius="xl"
-            style={{
-              background: '#f3f4f6',
-              color: '#6b7280',
-              fontWeight: 600,
-            }}
-          >
+    <div className="flex flex-col h-full bg-gray-50">
+      {/* Chat Header */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-semibold">
             {chat.author?.[0]?.toUpperCase() || 'A'}
-          </Avatar>
-          <div>
-            <Text fw={600} size="sm" c="#111827">
-              {chat.author || 'Anonymous User'}
-            </Text>
-            <Group gap={6} align="center">
-              <Box
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: '#10b981',
-                }}
-              />
-              <Text size="xs" c="#6b7280">
-                Active
-              </Text>
-            </Group>
           </div>
-        </Group>
-      </Box>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">
+              {chat.author || 'Anonymous User'}
+            </h3>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+              <span className="text-xs text-gray-600">Active</span>
+            </div>
+          </div>
+        </div>
+        {error && (
+          <div className="mt-2 text-xs text-red-600">{error}</div>
+        )}
+      </div>
 
-      <ScrollArea
-        style={{
-          flex: 1,
-          background: '#fafafa',
-        }}
-        p="md"
-      >
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => {
           const isStaff = message.author === 'staff';
           const isAI = message.author === 'ai';
 
           if (isAI) {
             return (
-              <Box key={message.id} style={{ marginBottom: 16 }}>
-                <Group gap="xs" align="flex-start">
-                  <Avatar
-                    size={24}
-                    radius="xl"
-                    style={{
-                      background: '#6366f1',
-                      color: 'white',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <IconSparkles size={14} />
-                  </Avatar>
-                  <Box style={{ flex: 1 }}>
-                    <Paper
-                      p="sm"
-                      style={{
-                        background: 'white',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: 8,
-                        borderTopLeftRadius: 2,
-                      }}
-                    >
-                      <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                        {message.message}
-                      </Text>
-                    </Paper>
-                    <Text size="xs" c="#9ca3af" mt={4} ml={2}>
-                      {new Date(message.created).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </Text>
-                  </Box>
-                </Group>
-              </Box>
+              <div key={message.id} className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                  <IconSparkles className="text-white" size={14} />
+                </div>
+                <div className="flex-1">
+                  <div className="bg-white border border-gray-200 rounded-lg rounded-tl-sm p-3">
+                    <p className="text-sm text-gray-800 leading-relaxed">
+                      {message.message}
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 ml-2">
+                    {new Date(message.created).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
             );
           }
 
           if (isStaff) {
             return (
-              <Box
-                key={message.id}
-                style={{
-                  marginBottom: 16,
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                }}
-              >
-                <Box style={{ maxWidth: '75%' }}>
-                  <Paper
-                    p="sm"
-                    style={{
-                      background: '#111827',
-                      color: 'white',
-                      borderRadius: 8,
-                      borderBottomRightRadius: 2,
-                    }}
-                  >
-                    <Text size="sm" style={{ lineHeight: 1.6 }}>
+              <div key={message.id} className="flex justify-end">
+                <div className="max-w-[75%]">
+                  <div className="bg-gray-900 text-white rounded-lg rounded-br-sm p-3">
+                    <p className="text-sm leading-relaxed">
                       {message.message}
-                    </Text>
-                  </Paper>
-                  <Group gap={6} justify="flex-end" mt={4} mr={2}>
-                    <Text size="xs" c="#9ca3af">
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5 mt-1 mr-2">
+                    <p className="text-xs text-gray-500">
                       {new Date(message.created).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
-                    </Text>
+                    </p>
                     {message.read ? (
-                      <IconChecks size={14} color="#10b981" />
+                      <IconChecks className="text-green-600" size={14} />
                     ) : message.sent ? (
-                      <IconCheck size={14} color="#9ca3af" />
+                      <IconCheck className="text-gray-400" size={14} />
                     ) : null}
-                  </Group>
-                </Box>
-              </Box>
+                  </div>
+                </div>
+              </div>
             );
           }
 
           return (
-            <Box key={message.id} style={{ marginBottom: 16 }}>
-              <Group gap="xs" align="flex-start">
-                <Avatar
-                  size={24}
-                  radius="xl"
-                  style={{
-                    background: '#f3f4f6',
-                    color: '#6b7280',
-                    fontWeight: 600,
-                    flexShrink: 0,
-                  }}
-                >
-                  {chat.author?.[0]?.toUpperCase() || 'A'}
-                </Avatar>
-                <Box style={{ flex: 1 }}>
-                  <Paper
-                    p="sm"
-                    style={{
-                      background: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      borderTopLeftRadius: 2,
-                    }}
-                  >
-                    <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                      {message.message}
-                    </Text>
-                  </Paper>
-                  <Text size="xs" c="#9ca3af" mt={4} ml={2}>
-                    {new Date(message.created).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </Text>
-                </Box>
-              </Group>
-            </Box>
+            <div key={message.id} className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-xs font-semibold flex-shrink-0">
+                {chat.author?.[0]?.toUpperCase() || 'A'}
+              </div>
+              <div className="flex-1">
+                <div className="bg-white border border-gray-200 rounded-lg rounded-tl-sm p-3">
+                  <p className="text-sm text-gray-800 leading-relaxed">
+                    {message.message}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500 mt-1 ml-2">
+                  {new Date(message.created).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+            </div>
           );
         })}
 
+        {/* Typing Indicator */}
         {isTyping && (
-          <Transition mounted={isTyping} transition="fade" duration={200}>
-            {(styles) => (
-              <Box style={{ ...styles, marginBottom: 16 }}>
-                <Group gap="xs" align="flex-start">
-                  <Avatar
-                    size={24}
-                    radius="xl"
-                    style={{
-                      background: '#f3f4f6',
-                      color: '#6b7280',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {chat.author?.[0]?.toUpperCase() || 'A'}
-                  </Avatar>
-                  <Paper
-                    p="sm"
-                    style={{
-                      background: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      minWidth: 60,
-                    }}
-                  >
-                    <div className="typing-dots" style={{ color: '#9ca3af' }}>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                  </Paper>
-                </Group>
-              </Box>
-            )}
-          </Transition>
+          <div className="flex items-start gap-2 animate-fade-in">
+            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-xs font-semibold">
+              {chat.author?.[0]?.toUpperCase() || 'A'}
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-3 min-w-[60px]">
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+              </div>
+            </div>
+          </div>
         )}
 
         <div ref={messagesEndRef} />
-      </ScrollArea>
+      </div>
 
-      <Box
-        p="md"
-        style={{
-          background: 'white',
-          borderTop: '1px solid #e5e7eb',
-        }}
-      >
-        <Textarea
-          value={newMessage}
-          onChange={handleTyping}
-          onKeyPress={handleKeyPress}
-          placeholder="Type a message..."
-          minRows={1}
-          maxRows={3}
-          autosize
-          styles={{
-            input: {
-              border: '1px solid #d1d5db',
-              borderRadius: 8,
-              fontSize: 14,
-              padding: '10px 44px 10px 12px',
-              '&:focus': {
-                borderColor: '#111827',
-              }
-            }
-          }}
-          rightSection={
-            <ActionIcon
-              onClick={handleSend}
-              disabled={!newMessage.trim()}
-              size="md"
-              style={{
-                background: newMessage.trim() ? '#111827' : '#e5e7eb',
-                color: 'white',
-                marginBottom: 4,
-              }}
-            >
-              <IconSend size={16} />
-            </ActionIcon>
-          }
-        />
-      </Box>
-    </Box>
+      {/* Message Input */}
+      <div className="bg-white border-t border-gray-200 p-4">
+        <div className="flex items-end gap-2">
+          <textarea
+            value={newMessage}
+            onChange={handleTyping}
+            onKeyPress={handleKeyPress}
+            placeholder="Type a message..."
+            rows={1}
+            className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+            style={{ minHeight: '42px', maxHeight: '120px' }}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!newMessage.trim()}
+            className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-white transition-colors"
+          >
+            <IconSend size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
-
-export default ChatWindow;
