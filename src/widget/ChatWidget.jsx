@@ -59,12 +59,13 @@ function ChatWidget({ apiUrl, wsUrl }) {
           setMessages(prev => {
             const exists = prev.some(m => m.id === data.record.id);
             if (exists) {
-              return prev.map(m => m.id === data.record.id ? data.record : m);
+              // Update existing message (including read/sent status)
+              return prev.map(m => m.id === data.record.id ? { ...data.record } : m);
             }
             return [...prev, data.record];
           });
 
-          if (data.record.author === 'staff' && !data.record.read) {
+          if (data.record.author === 'staff' && !data.record.read && document.hasFocus()) {
             markAsRead(data.record.id);
           }
         }
@@ -225,30 +226,71 @@ function ChatWidget({ apiUrl, wsUrl }) {
           >
             <Box
               style={{
-                background: '#00bfa5',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
-                padding: '20px',
+                padding: '24px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
               }}
             >
-              <Group justify="space-between">
-                <Group>
-                  <Avatar size={40} color="rgba(255,255,255,0.25)">
-                    <IconHeadset size={24} />
-                  </Avatar>
+              <Group justify="space-between" align="flex-start">
+                <Group align="center" gap="md">
+                  <Box
+                    style={{
+                      position: 'relative',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        inset: -4,
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        animation: 'pulse 2s ease-in-out infinite',
+                      }
+                    }}
+                  >
+                    <Avatar
+                      size={48}
+                      radius="xl"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(10px)',
+                        border: '2px solid rgba(255, 255, 255, 0.3)',
+                      }}
+                    >
+                      <IconHeadset size={24} />
+                    </Avatar>
+                  </Box>
                   <div>
-                    <Text fw={600} size="lg" c="white">
-                      Chat with us
+                    <Text fw={700} size="lg" c="white" style={{ marginBottom: 2 }}>
+                      Support Team
                     </Text>
-                    <Text size="xs" c="white" opacity={0.95}>
-                      We typically reply instantly
-                    </Text>
+                    <Group gap={6} align="center">
+                      <Box
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: '#4ade80',
+                          boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)',
+                        }}
+                      />
+                      <Text size="xs" c="white" opacity={0.9} fw={500}>
+                        Online now
+                      </Text>
+                    </Group>
                   </div>
                 </Group>
                 <ActionIcon
                   variant="subtle"
-                  color="white"
+                  c="white"
                   onClick={() => setIsOpen(false)}
                   size="lg"
+                  radius="md"
+                  style={{
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      background: 'rgba(255, 255, 255, 0.15)',
+                    }
+                  }}
                 >
                   <IconMinus size={20} />
                 </ActionIcon>
@@ -259,30 +301,80 @@ function ChatWidget({ apiUrl, wsUrl }) {
               <Stack
                 align="center"
                 justify="center"
-                gap="lg"
-                style={{ flex: 1, padding: '2rem' }}
+                gap="xl"
+                style={{
+                  flex: 1,
+                  padding: '3rem 2rem',
+                  background: 'linear-gradient(to bottom, #fafafa 0%, #ffffff 100%)',
+                }}
               >
-                <Avatar size={64} color="teal" radius="xl">
-                  <IconMessage size={32} />
-                </Avatar>
-                <Text fw={600} size="lg" ta="center">
-                  Start a conversation
-                </Text>
-                <Text size="sm" c="dimmed" ta="center">
-                  We usually respond within a few minutes
-                </Text>
+                <Box
+                  style={{
+                    position: 'relative',
+                    padding: '1rem',
+                  }}
+                >
+                  <Box
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      opacity: 0.1,
+                      filter: 'blur(20px)',
+                    }}
+                  />
+                  <Avatar
+                    size={80}
+                    radius="xl"
+                    style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)',
+                    }}
+                  >
+                    <IconMessage size={40} />
+                  </Avatar>
+                </Box>
+                <Stack gap="xs" align="center">
+                  <Text fw={700} size="xl" ta="center" c="#1e293b">
+                    Welcome to Support
+                  </Text>
+                  <Text size="sm" c="dimmed" ta="center" maw={280}>
+                    Get instant help from our team. We typically respond in under a minute.
+                  </Text>
+                </Stack>
                 <TextInput
                   w="100%"
+                  size="md"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Enter your name"
+                  placeholder="Enter your name to continue"
+                  styles={{
+                    input: {
+                      borderRadius: '12px',
+                      border: '2px solid #e2e8f0',
+                      fontSize: '15px',
+                      padding: '12px 16px',
+                      transition: 'all 0.2s',
+                      '&:focus': {
+                        borderColor: '#667eea',
+                        boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                      }
+                    }
+                  }}
                   rightSection={
                     <ActionIcon
                       onClick={handleJoin}
                       disabled={!username.trim()}
-                      color="teal"
-                      variant="subtle"
+                      size="lg"
+                      radius="md"
+                      style={{
+                        background: username.trim() ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#e2e8f0',
+                        color: 'white',
+                        transition: 'all 0.2s',
+                        cursor: username.trim() ? 'pointer' : 'not-allowed',
+                      }}
                     >
                       <IconSend size={18} />
                     </ActionIcon>
@@ -313,23 +405,31 @@ function ChatWidget({ apiUrl, wsUrl }) {
                       // AI messages (centered with robot icon)
                       if (isAI) {
                         return (
-                          <Box key={message.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                            <Group gap="xs">
-                              <Avatar size={22} color="violet" variant="filled">
-                                <IconRobot size={12} />
-                              </Avatar>
-                              <Paper
-                                p="xs"
-                                px="sm"
+                          <Box key={message.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                            <Group gap="sm">
+                              <Avatar
+                                size={26}
+                                radius="xl"
                                 style={{
-                                  backgroundColor: '#f3e5f5',
-                                  color: '#6a1b9a',
-                                  borderRadius: '14px',
-                                  border: '1px solid #ce93d8',
-                                  boxShadow: '0 2px 6px rgba(106, 27, 154, 0.08)'
+                                  background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
+                                  boxShadow: '0 2px 8px rgba(139, 92, 246, 0.25)',
                                 }}
                               >
-                                <Text size="xs" style={{ lineHeight: 1.5, fontWeight: 500 }}>
+                                <IconRobot size={14} />
+                              </Avatar>
+                              <Paper
+                                p="sm"
+                                px="md"
+                                style={{
+                                  backgroundColor: '#faf5ff',
+                                  color: '#6b21a8',
+                                  borderRadius: '16px',
+                                  border: '1px solid #e9d5ff',
+                                  boxShadow: '0 2px 8px rgba(139, 92, 246, 0.08)',
+                                  maxWidth: '260px',
+                                }}
+                              >
+                                <Text size="sm" style={{ lineHeight: 1.6, fontWeight: 500 }}>
                                   {message.message}
                                 </Text>
                               </Paper>
@@ -344,51 +444,66 @@ function ChatWidget({ apiUrl, wsUrl }) {
                           style={{
                             display: 'flex',
                             justifyContent: isStaff ? 'flex-start' : 'flex-end',
-                            marginBottom: '1rem'
+                            marginBottom: '1.25rem',
+                            paddingLeft: isStaff ? 0 : '3rem',
+                            paddingRight: isStaff ? '3rem' : 0,
                           }}
                         >
                           <Group
                             align="flex-end"
+                            gap="sm"
                             style={{
                               flexDirection: isStaff ? 'row' : 'row-reverse',
-                              maxWidth: '75%'
+                              maxWidth: '100%',
                             }}
                           >
                             <Avatar
-                              size={32}
-                              color={isStaff ? 'teal' : 'gray'}
-                              style={{ margin: '0 0.5rem' }}
+                              size={36}
+                              radius="xl"
+                              style={{
+                                background: isStaff
+                                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                  : 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                                boxShadow: isStaff
+                                  ? '0 2px 8px rgba(102, 126, 234, 0.25)'
+                                  : '0 2px 8px rgba(100, 116, 139, 0.25)',
+                                border: '2px solid white',
+                              }}
                             >
                               {isStaff ? <IconHeadset size={18} /> : <IconUser size={18} />}
                             </Avatar>
 
                             <div>
                               <Paper
-                                p="sm"
+                                p="md"
                                 style={{
-                                  backgroundColor: isStaff ? '#f1f5f9' : '#00bfa5',
+                                  backgroundColor: isStaff ? '#ffffff' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  background: isStaff ? '#ffffff' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                   color: isStaff ? '#1e293b' : 'white',
-                                  borderRadius: '12px',
-                                  borderTopLeftRadius: isStaff ? '4px' : '12px',
-                                  borderTopRightRadius: isStaff ? '12px' : '4px',
+                                  borderRadius: '16px',
+                                  borderTopLeftRadius: isStaff ? '6px' : '16px',
+                                  borderTopRightRadius: isStaff ? '16px' : '6px',
                                   wordBreak: 'break-word',
-                                  border: isStaff ? '1px solid #e2e8f0' : 'none'
+                                  border: isStaff ? '1px solid #e2e8f0' : 'none',
+                                  boxShadow: isStaff
+                                    ? '0 2px 8px rgba(0, 0, 0, 0.04)'
+                                    : '0 4px 12px rgba(102, 126, 234, 0.3)',
                                 }}
                               >
-                                <Text size="sm" style={{ lineHeight: 1.5 }}>
+                                <Text size="sm" style={{ lineHeight: 1.6 }}>
                                   {message.message}
                                 </Text>
                               </Paper>
                               <Group
-                                gap={4}
+                                gap={6}
                                 justify={isStaff ? 'flex-start' : 'flex-end'}
                                 style={{
-                                  marginTop: 4,
-                                  marginLeft: isStaff ? 8 : 0,
-                                  marginRight: isStaff ? 0 : 8
+                                  marginTop: 6,
+                                  paddingLeft: isStaff ? 4 : 0,
+                                  paddingRight: isStaff ? 0 : 4,
                                 }}
                               >
-                                <Text size="xs" c="dimmed">
+                                <Text size="xs" c="dimmed" fw={500}>
                                   {new Date(message.created).toLocaleTimeString([], {
                                     hour: '2-digit',
                                     minute: '2-digit'
@@ -396,9 +511,9 @@ function ChatWidget({ apiUrl, wsUrl }) {
                                 </Text>
                                 {!isStaff && (
                                   message.read ? (
-                                    <IconChecks size={14} color="#00bfa5" />
+                                    <IconChecks size={15} color="#667eea" style={{ strokeWidth: 2.5 }} />
                                   ) : message.sent ? (
-                                    <IconCheck size={14} color="#64748b" />
+                                    <IconCheck size={15} color="#94a3b8" style={{ strokeWidth: 2.5 }} />
                                   ) : null
                                 )}
                               </Group>
@@ -413,22 +528,31 @@ function ChatWidget({ apiUrl, wsUrl }) {
                   {hasJoined && (
                     <Transition mounted={isTyping} transition="fade" duration={200}>
                       {(styles) => (
-                        <Box style={{ ...styles, display: 'flex', marginBottom: '1rem' }}>
-                          <Group align="flex-end">
-                            <Avatar size={32} color="teal" style={{ margin: '0 0.5rem' }}>
+                        <Box style={{ ...styles, display: 'flex', marginBottom: '1.25rem', paddingRight: '3rem' }}>
+                          <Group align="flex-end" gap="sm">
+                            <Avatar
+                              size={36}
+                              radius="xl"
+                              style={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.25)',
+                                border: '2px solid white',
+                              }}
+                            >
                               <IconHeadset size={18} />
                             </Avatar>
                             <Paper
-                              p="sm"
+                              p="md"
                               style={{
-                                backgroundColor: '#f1f5f9',
-                                borderRadius: '12px',
-                                borderTopLeftRadius: '4px',
+                                backgroundColor: '#ffffff',
+                                borderRadius: '16px',
+                                borderTopLeftRadius: '6px',
                                 border: '1px solid #e2e8f0',
-                                minWidth: '60px'
+                                minWidth: '70px',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
                               }}
                             >
-                              <div className="typing-dots" style={{ color: '#64748b' }}>
+                              <div className="typing-dots" style={{ color: '#667eea' }}>
                                 <span></span>
                                 <span></span>
                                 <span></span>
@@ -443,24 +567,55 @@ function ChatWidget({ apiUrl, wsUrl }) {
                   <div ref={messagesEndRef} />
                 </Box>
 
-                <Divider />
-
-                <Box p="md" style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                <Box
+                  p="lg"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderTop: '1px solid #f1f5f9',
+                    boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.03)',
+                  }}
+                >
                   <Textarea
                     value={newMessage}
                     onChange={handleTyping}
                     onKeyPress={handleKeyPress}
-                    placeholder="Write a message..."
+                    placeholder="Type your message..."
                     minRows={1}
                     maxRows={3}
                     autosize
+                    styles={{
+                      input: {
+                        borderRadius: '14px',
+                        border: '2px solid #e2e8f0',
+                        backgroundColor: '#fafafa',
+                        fontSize: '14px',
+                        padding: '12px 50px 12px 16px',
+                        transition: 'all 0.2s',
+                        '&:focus': {
+                          borderColor: '#667eea',
+                          backgroundColor: '#ffffff',
+                          boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.08)',
+                        }
+                      }
+                    }}
                     rightSection={
                       <ActionIcon
                         onClick={handleSend}
                         disabled={!newMessage.trim()}
-                        color="teal"
-                        variant="subtle"
-                        style={{ marginTop: 'auto', marginBottom: 4 }}
+                        size="lg"
+                        radius="xl"
+                        style={{
+                          background: newMessage.trim()
+                            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                            : '#e2e8f0',
+                          color: 'white',
+                          marginTop: 'auto',
+                          marginBottom: 4,
+                          marginRight: 4,
+                          transition: 'all 0.2s',
+                          cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
+                          boxShadow: newMessage.trim() ? '0 2px 8px rgba(102, 126, 234, 0.3)' : 'none',
+                        }}
                       >
                         <IconSend size={18} />
                       </ActionIcon>
@@ -475,19 +630,23 @@ function ChatWidget({ apiUrl, wsUrl }) {
 
       <ActionIcon
         onClick={() => setIsOpen(!isOpen)}
-        size={60}
+        size={64}
         radius="xl"
         style={{
-          backgroundColor: '#00bfa5',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
-          boxShadow: '0 4px 12px rgba(0,191,165,0.4)',
-          transition: 'all 0.2s',
+          boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4), 0 2px 8px rgba(0, 0, 0, 0.12)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          border: '3px solid white',
         }}
         styles={{
           root: {
             '&:hover': {
-              backgroundColor: '#008e76',
-              boxShadow: '0 6px 16px rgba(0,191,165,0.5)',
+              transform: 'scale(1.08)',
+              boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5), 0 4px 12px rgba(0, 0, 0, 0.15)',
+            },
+            '&:active': {
+              transform: 'scale(0.95)',
             }
           }
         }}

@@ -52,62 +52,114 @@ function StaffLogin({ onLogin }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #00bfa5 0%, #00695c 100%)'
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '2rem',
       }}
     >
       <Container size="xs">
         <Paper
-          p="xl"
-          radius="lg"
-          shadow="xl"
+          p="2.5rem"
+          radius="20px"
           style={{
             textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <Stack align="center" gap="lg">
-            <Avatar
-              size={80}
-              color="teal"
-              variant="gradient"
-              gradient={{ from: 'teal', to: 'cyan', deg: 45 }}
-            >
-              <IconHeadset size={48} />
-            </Avatar>
+          <Stack align="center" gap="xl">
+            <Box style={{ position: 'relative', padding: '1rem' }}>
+              <Box
+                style={{
+                  position: 'absolute',
+                  inset: -20,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  opacity: 0.15,
+                  filter: 'blur(30px)',
+                }}
+              />
+              <Avatar
+                size={100}
+                radius="xl"
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                }}
+              >
+                <IconHeadset size={54} />
+              </Avatar>
+            </Box>
 
-            <div>
-              <Text size="xl" fw={700} mb="xs">
+            <Stack gap="xs" align="center">
+              <Text size="28px" fw={700} c="#1e293b">
                 Staff Portal
               </Text>
-
-              <Text c="dimmed" size="sm">
+              <Text c="dimmed" size="sm" fw={500}>
                 Sign in to access the support dashboard
               </Text>
-            </div>
+            </Stack>
 
             {error && (
-              <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" w="100%">
+              <Alert
+                icon={<IconAlertCircle size={18} />}
+                color="red"
+                variant="light"
+                w="100%"
+                radius="md"
+                styles={{
+                  root: {
+                    border: '1px solid #fecaca',
+                  }
+                }}
+              >
                 {error}
               </Alert>
             )}
 
             <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-              <Stack gap="md">
+              <Stack gap="lg">
                 <TextInput
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email address"
-                  size="md"
+                  placeholder="Enter your email"
+                  size="lg"
                   autoFocus
                   type="email"
                   required
+                  styles={{
+                    input: {
+                      borderRadius: '12px',
+                      border: '2px solid #e2e8f0',
+                      fontSize: '15px',
+                      padding: '14px 18px',
+                      transition: 'all 0.2s',
+                      '&:focus': {
+                        borderColor: '#667eea',
+                        boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                      }
+                    }
+                  }}
                 />
 
                 <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  size="md"
+                  placeholder="Enter your password"
+                  size="lg"
                   required
+                  styles={{
+                    input: {
+                      borderRadius: '12px',
+                      border: '2px solid #e2e8f0',
+                      fontSize: '15px',
+                      padding: '14px 18px',
+                      transition: 'all 0.2s',
+                      '&:focus': {
+                        borderColor: '#667eea',
+                        boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                      }
+                    }
+                  }}
                 />
 
                 <Button
@@ -115,9 +167,20 @@ function StaffLogin({ onLogin }) {
                   fullWidth
                   size="lg"
                   loading={loading}
-                  color="teal"
-                  variant="gradient"
-                  gradient={{ from: 'teal', to: 'cyan', deg: 45 }}
+                  radius="12px"
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    padding: '14px',
+                    height: 'auto',
+                    boxShadow: '0 4px 16px rgba(102, 126, 234, 0.4)',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
+                    }
+                  }}
                 >
                   Sign In
                 </Button>

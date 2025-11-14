@@ -56,12 +56,13 @@ function ChatWindow({ chat, staffName }) {
         setMessages(prev => {
           const exists = prev.some(m => m.id === data.record.id);
           if (exists) {
-            return prev.map(m => m.id === data.record.id ? data.record : m);
+            // Update existing message (including read/sent status)
+            return prev.map(m => m.id === data.record.id ? { ...data.record } : m);
           }
           return [...prev, data.record];
         });
 
-        if (data.record.author !== 'staff' && !data.record.read) {
+        if (data.record.author !== 'staff' && !data.record.read && document.hasFocus()) {
           markAsRead(data.record.id);
         }
       }
@@ -167,24 +168,47 @@ function ChatWindow({ chat, staffName }) {
     <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Paper
         shadow="none"
-        p="lg"
+        p="xl"
         style={{
           borderRadius: 0,
-          borderBottom: '1px solid #e9ecef',
-          backgroundColor: 'white'
+          borderBottom: '1px solid #f1f5f9',
+          backgroundColor: 'white',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
         }}
       >
-        <Group>
-          <Avatar size={48} color="gray">
+        <Group gap="md">
+          <Avatar
+            size={56}
+            radius="xl"
+            style={{
+              background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '22px',
+              boxShadow: '0 4px 12px rgba(100, 116, 139, 0.25)',
+              border: '3px solid #f8fafc',
+            }}
+          >
             {chat.author?.[0]?.toUpperCase() || 'A'}
           </Avatar>
           <div>
-            <Text fw={600} size="md">
+            <Text fw={700} size="lg" c="#1e293b">
               {chat.author || 'Anonymous User'}
             </Text>
-            <Text size="sm" c="dimmed">
-              Active now
-            </Text>
+            <Group gap={8} align="center" mt={4}>
+              <Box
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: '#4ade80',
+                  boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)',
+                }}
+              />
+              <Text size="sm" c="#64748b" fw={500}>
+                Active now
+              </Text>
+            </Group>
           </div>
         </Group>
       </Paper>
@@ -204,24 +228,32 @@ function ChatWindow({ chat, staffName }) {
           // AI messages (centered with robot icon)
           if (isAI) {
             return (
-              <Box key={message.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <Box key={message.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
                 <Group gap="sm">
-                  <Avatar size={24} color="violet" variant="filled">
+                  <Avatar
+                    size={26}
+                    radius="xl"
+                    style={{
+                      background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
+                      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.25)',
+                    }}
+                  >
                     <IconRobot size={14} />
                   </Avatar>
                   <Paper
-                    p="xs"
+                    p="sm"
                     px="md"
                     style={{
-                      backgroundColor: '#f3e5f5',
-                      color: '#6a1b9a',
+                      backgroundColor: '#faf5ff',
+                      color: '#6b21a8',
                       borderRadius: '16px',
-                      border: '1px solid #ce93d8',
-                      boxShadow: '0 2px 8px rgba(106, 27, 154, 0.1)'
+                      border: '1px solid #e9d5ff',
+                      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.08)',
+                      maxWidth: '420px',
                     }}
                     shadow="none"
                   >
-                    <Text size="xs" style={{ lineHeight: 1.6, fontWeight: 500 }}>
+                    <Text size="sm" style={{ lineHeight: 1.6, fontWeight: 500 }}>
                       {message.message}
                     </Text>
                   </Paper>
@@ -236,54 +268,71 @@ function ChatWindow({ chat, staffName }) {
               style={{
                 display: 'flex',
                 justifyContent: isStaff ? 'flex-end' : 'flex-start',
-                marginBottom: '1rem'
+                marginBottom: '1.25rem',
+                paddingLeft: isStaff ? '4rem' : 0,
+                paddingRight: isStaff ? 0 : '4rem',
               }}
             >
               <Group
                 align="flex-end"
+                gap="sm"
                 style={{
                   flexDirection: isStaff ? 'row-reverse' : 'row',
-                  maxWidth: '65%'
+                  maxWidth: '100%'
                 }}
               >
                 {showAvatar ? (
                   <Avatar
-                    size={32}
-                    color={isStaff ? 'teal' : 'gray'}
-                    style={{ margin: '0 0.5rem' }}
+                    size={36}
+                    radius="xl"
+                    style={{
+                      background: isStaff
+                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                        : 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                      boxShadow: isStaff
+                        ? '0 2px 8px rgba(102, 126, 234, 0.25)'
+                        : '0 2px 8px rgba(100, 116, 139, 0.25)',
+                      border: '2px solid white',
+                    }}
                   >
-                    {isStaff ? <IconHeadset size={16} /> : <IconUser size={16} />}
+                    {isStaff ? <IconHeadset size={18} /> : <IconUser size={18} />}
                   </Avatar>
                 ) : (
-                  <Box style={{ width: 32, margin: '0 0.5rem' }} />
+                  <Box style={{ width: 36, margin: '0' }} />
                 )}
 
                 <div>
                   <Paper
-                    p="sm"
+                    p="md"
                     style={{
-                      backgroundColor: isStaff ? '#00bfa5' : '#f1f5f9',
+                      backgroundColor: isStaff ? '#ffffff' : '#ffffff',
+                      background: isStaff ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#ffffff',
                       color: isStaff ? 'white' : '#1e293b',
-                      borderRadius: '8px',
+                      borderRadius: '16px',
+                      borderTopLeftRadius: isStaff ? '16px' : '6px',
+                      borderTopRightRadius: isStaff ? '6px' : '16px',
                       wordBreak: 'break-word',
-                      border: isStaff ? 'none' : '1px solid #e2e8f0'
+                      border: isStaff ? 'none' : '1px solid #e2e8f0',
+                      boxShadow: isStaff
+                        ? '0 4px 12px rgba(102, 126, 234, 0.3)'
+                        : '0 2px 8px rgba(0, 0, 0, 0.04)',
                     }}
                     shadow="none"
                   >
-                    <Text size="sm" style={{ lineHeight: 1.5 }}>
+                    <Text size="sm" style={{ lineHeight: 1.6 }}>
                       {message.message}
                     </Text>
                   </Paper>
                   <Group
-                    gap={4}
+                    gap={6}
                     justify={isStaff ? 'flex-end' : 'flex-start'}
                     style={{
-                      marginTop: 4,
-                      marginLeft: isStaff ? 0 : 8,
-                      marginRight: isStaff ? 8 : 0
+                      marginTop: 6,
+                      paddingLeft: isStaff ? 0 : 4,
+                      paddingRight: isStaff ? 4 : 0,
                     }}
                   >
-                    <Text size="xs" c="dimmed">
+                    <Text size="xs" c="dimmed" fw={500}>
                       {new Date(message.created).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit'
@@ -291,9 +340,9 @@ function ChatWindow({ chat, staffName }) {
                     </Text>
                     {isStaff && (
                       message.read ? (
-                        <IconChecks size={14} color="#00bfa5" />
+                        <IconChecks size={15} color="#667eea" style={{ strokeWidth: 2.5 }} />
                       ) : message.sent ? (
-                        <IconCheck size={14} color="#64748b" />
+                        <IconCheck size={15} color="#94a3b8" style={{ strokeWidth: 2.5 }} />
                       ) : null
                     )}
                   </Group>
@@ -306,22 +355,32 @@ function ChatWindow({ chat, staffName }) {
         {/* Typing indicator */}
         <Transition mounted={isTyping} transition="fade" duration={200}>
           {(styles) => (
-            <Box style={{ ...styles, display: 'flex', marginBottom: '1rem' }}>
-              <Group align="flex-end">
-                <Avatar size={32} color="gray" style={{ margin: '0 0.5rem' }}>
-                  <IconUser size={16} />
+            <Box style={{ ...styles, display: 'flex', marginBottom: '1.25rem', paddingRight: '4rem' }}>
+              <Group align="flex-end" gap="sm">
+                <Avatar
+                  size={36}
+                  radius="xl"
+                  style={{
+                    background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                    boxShadow: '0 2px 8px rgba(100, 116, 139, 0.25)',
+                    border: '2px solid white',
+                  }}
+                >
+                  <IconUser size={18} />
                 </Avatar>
                 <Paper
-                  p="sm"
+                  p="md"
                   style={{
-                    backgroundColor: '#f1f5f9',
-                    borderRadius: '8px',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '16px',
+                    borderTopLeftRadius: '6px',
                     border: '1px solid #e2e8f0',
-                    minWidth: '60px'
+                    minWidth: '70px',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
                   }}
                   shadow="none"
                 >
-                  <div className="typing-dots" style={{ color: '#64748b' }}>
+                  <div className="typing-dots" style={{ color: '#667eea' }}>
                     <span></span>
                     <span></span>
                     <span></span>
@@ -337,11 +396,12 @@ function ChatWindow({ chat, staffName }) {
 
       <Paper
         shadow="none"
-        p="md"
+        p="lg"
         style={{
           borderRadius: 0,
-          borderTop: '1px solid #e9ecef',
-          backgroundColor: 'white'
+          borderTop: '1px solid #f1f5f9',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.03)',
         }}
       >
         <Textarea
@@ -352,22 +412,43 @@ function ChatWindow({ chat, staffName }) {
           minRows={1}
           maxRows={4}
           autosize
+          styles={{
+            input: {
+              borderRadius: '14px',
+              border: '2px solid #e2e8f0',
+              backgroundColor: '#fafafa',
+              fontSize: '14px',
+              padding: '12px 50px 12px 16px',
+              transition: 'all 0.2s',
+              '&:focus': {
+                borderColor: '#667eea',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.08)',
+              }
+            }
+          }}
           rightSection={
             <ActionIcon
               onClick={handleSend}
               disabled={!newMessage.trim()}
-              color="teal"
-              variant="subtle"
-              style={{ marginTop: 'auto', marginBottom: 4 }}
+              size="lg"
+              radius="xl"
+              style={{
+                background: newMessage.trim()
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  : '#e2e8f0',
+                color: 'white',
+                marginTop: 'auto',
+                marginBottom: 4,
+                marginRight: 4,
+                transition: 'all 0.2s',
+                cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
+                boxShadow: newMessage.trim() ? '0 2px 8px rgba(102, 126, 234, 0.3)' : 'none',
+              }}
             >
               <IconSend size={18} />
             </ActionIcon>
           }
-          styles={{
-            root: {
-              backgroundColor: '#f8fafc'
-            }
-          }}
         />
       </Paper>
     </Box>
