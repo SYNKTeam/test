@@ -10,7 +10,8 @@ import {
   Zoom,
   Collapse,
   Divider,
-  InputAdornment
+  InputAdornment,
+  Fade
 } from '@mui/material';
 import ChatIcon from '@mui/icons-material/Chat';
 import CloseIcon from '@mui/icons-material/Close';
@@ -31,7 +32,9 @@ function ChatWidget({ apiUrl, wsUrl }) {
   const [chatId, setChatId] = useState(null);
   const [userId, setUserId] = useState(null);
   const [ws, setWs] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,6 +69,13 @@ function ChatWidget({ apiUrl, wsUrl }) {
           }
         }
       }
+
+      // Handle typing indicators
+      if (data.type === 'typing' && data.chatId === chatId) {
+        if (data.author === 'staff') {
+          setIsTyping(data.isTyping);
+        }
+      }
     };
 
     setWs(websocket);
@@ -91,6 +101,41 @@ function ChatWidget({ apiUrl, wsUrl }) {
       await axios.patch(`${apiUrl}/messages/${messageId}/read`);
     } catch (error) {
       console.error('Failed to mark message as read:', error);
+    }
+  };
+
+  const sendTypingIndicator = (typing) => {
+    if (ws && ws.readyState === WebSocket.OPEN && chatId) {
+      ws.send(JSON.stringify({
+        type: 'typing',
+        chatId: chatId,
+        author: userId,
+        isTyping: typing
+      }));
+    }
+  };
+
+  const handleTyping = (e) => {
+    setNewMessage(e.target.value);
+
+    // Send typing indicator
+    if (e.target.value.trim()) {
+      sendTypingIndicator(true);
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Stop typing indicator after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingIndicator(false);
+      }, 2000);
+    } else {
+      sendTypingIndicator(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     }
   };
 
@@ -128,6 +173,10 @@ function ChatWidget({ apiUrl, wsUrl }) {
 
       // Message will be added via WebSocket subscription
       setNewMessage('');
+      sendTypingIndicator(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
     }
@@ -383,6 +432,41 @@ function ChatWidget({ apiUrl, wsUrl }) {
                     );
                   })
                 )}
+
+                {/* Typing indicator */}
+                {hasJoined && (
+                  <Fade in={isTyping}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-start',
+                        mb: 2
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'flex-end', maxWidth: '75%' }}>
+                        <Avatar sx={{ width: 32, height: 32, mx: 1, bgcolor: '#00bfa5' }}>
+                          <SupportAgentIcon fontSize="small" />
+                        </Avatar>
+                        <Paper
+                          elevation={0}
+                          sx={{
+                            p: 1.5,
+                            backgroundColor: '#f1f5f9',
+                            borderRadius: '12px',
+                            borderTopLeftRadius: '4px',
+                            border: '1px solid #e2e8f0',
+                            minWidth: '60px'
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.85rem' }}>
+                            typing...
+                          </Typography>
+                        </Paper>
+                      </Box>
+                    </Box>
+                  </Fade>
+                )}
+
                 <div ref={messagesEndRef} />
               </Box>
 
@@ -394,7 +478,7 @@ function ChatWidget({ apiUrl, wsUrl }) {
                   multiline
                   maxRows={3}
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleTyping}
                   onKeyPress={handleKeyPress}
                   placeholder="Write a message..."
                   variant="outlined"

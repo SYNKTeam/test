@@ -50,6 +50,24 @@ wss.on('connection', (ws) => {
   const clientId = Math.random().toString(36).substring(7);
   clients.set(clientId, ws);
 
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message.toString());
+
+      // Handle typing indicators
+      if (data.type === 'typing') {
+        broadcastToClients({
+          type: 'typing',
+          chatId: data.chatId,
+          author: data.author,
+          isTyping: data.isTyping
+        });
+      }
+    } catch (error) {
+      console.error('Error handling WebSocket message:', error);
+    }
+  });
+
   ws.on('close', () => {
     clients.delete(clientId);
   });
