@@ -7,7 +7,8 @@ import {
   Typography,
   Avatar,
   Divider,
-  InputAdornment
+  InputAdornment,
+  Fade
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import PersonIcon from '@mui/icons-material/Person';
@@ -17,11 +18,16 @@ import DoneAllIcon from '@mui/icons-material/DoneAll';
 import axios from 'axios';
 
 const API_URL = '/api';
+const isDev = import.meta.env.DEV;
+const WS_URL = isDev ? 'ws://localhost:3001' : `ws://${window.location.host}`;
 
 function ChatWindow({ chat, staffName }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [ws, setWs] = useState(null);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,30 +38,59 @@ function ChatWindow({ chat, staffName }) {
   }, [chat.id]);
 
   useEffect(() => {
-    if (chat.needsRefresh) {
-      loadMessages();
-    }
-  }, [chat.needsRefresh]);
-
-  useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Mark customer messages as read when they load
+  // WebSocket connection for real-time updates
   useEffect(() => {
-    if (messages.length > 0) {
-      messages.forEach(message => {
-        if (message.author !== 'staff' && !message.read) {
-          markAsRead(message.id);
+    const websocket = new WebSocket(WS_URL);
+
+    websocket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      // Handle new/updated messages
+      if (data.type === 'message' && data.record.chatParentID === chat.id) {
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === data.record.id);
+          if (exists) {
+            // Update existing message (e.g., read status changed)
+            return prev.map(m => m.id === data.record.id ? data.record : m);
+          }
+          return [...prev, data.record];
+        });
+
+        // Mark customer messages as read
+        if (data.record.author !== 'staff' && !data.record.read) {
+          markAsRead(data.record.id);
         }
-      });
-    }
-  }, [messages]);
+      }
+
+      // Handle typing indicators
+      if (data.type === 'typing' && data.chatId === chat.id) {
+        if (data.author !== 'staff') {
+          setIsTyping(data.isTyping);
+        }
+      }
+    };
+
+    setWs(websocket);
+
+    return () => {
+      websocket.close();
+    };
+  }, [chat.id]);
 
   const loadMessages = async () => {
     try {
       const response = await axios.get(`${API_URL}/messages/${chat.id}`);
       setMessages(response.data);
+
+      // Mark all customer messages as read
+      response.data.forEach(message => {
+        if (message.author !== 'staff' && !message.read) {
+          markAsRead(message.id);
+        }
+      });
     } catch (error) {
       console.error('Failed to load messages:', error);
     }
@@ -69,6 +104,41 @@ function ChatWindow({ chat, staffName }) {
     }
   };
 
+  const sendTypingIndicator = (typing) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'typing',
+        chatId: chat.id,
+        author: 'staff',
+        isTyping: typing
+      }));
+    }
+  };
+
+  const handleTyping = (e) => {
+    setNewMessage(e.target.value);
+
+    // Send typing indicator
+    if (e.target.value.trim()) {
+      sendTypingIndicator(true);
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Stop typing indicator after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingIndicator(false);
+      }, 2000);
+    } else {
+      sendTypingIndicator(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    }
+  };
+
   const handleSend = async () => {
     if (!newMessage.trim()) return;
 
@@ -79,6 +149,10 @@ function ChatWindow({ chat, staffName }) {
         chatParentID: chat.id
       });
       setNewMessage('');
+      sendTypingIndicator(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
     }
@@ -217,6 +291,38 @@ function ChatWindow({ chat, staffName }) {
             </Box>
           );
         })}
+
+        {/* Typing indicator */}
+        <Fade in={isTyping}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              mb: 2
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', maxWidth: '65%' }}>
+              <Avatar sx={{ width: 32, height: 32, mx: 1, bgcolor: 'secondary.main' }}>
+                <PersonIcon fontSize="small" />
+              </Avatar>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  backgroundColor: '#f1f5f9',
+                  borderRadius: 2,
+                  border: '1px solid #e2e8f0',
+                  minWidth: '60px'
+                }}
+              >
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  typing...
+                </Typography>
+              </Paper>
+            </Box>
+          </Box>
+        </Fade>
+
         <div ref={messagesEndRef} />
       </Box>
 
@@ -235,7 +341,7 @@ function ChatWindow({ chat, staffName }) {
           multiline
           maxRows={4}
           value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+          onChange={handleTyping}
           onKeyPress={handleKeyPress}
           placeholder="Type your message..."
           variant="outlined"
