@@ -4,7 +4,7 @@ A professional real-time live chat support system built with React, PocketBase, 
 
 ## Features
 
-- **Single Server Architecture** - Everything runs on one server
+- **Single Server Architecture** - Everything in one place
 - Real-time messaging with WebSocket support
 - Staff dashboard with authentication for managing conversations
 - Embeddable chat widget for websites
@@ -17,14 +17,16 @@ A professional real-time live chat support system built with React, PocketBase, 
 
 ```
 .
-├── backend/          # Express server + static files
-│   ├── server.js     # Main server (API + static file serving)
-│   ├── public/       # Built frontend files
-│   │   ├── index.html       # Widget demo (/)
-│   │   └── staff/           # Staff panel (/staff)
-│   └── .env          # PocketBase credentials
-├── frontend/         # Staff dashboard source (React + Material-UI)
-└── widget/           # Chat widget source (React + Material-UI)
+├── server.js         # Main server (API + static file serving)
+├── package.json      # All dependencies
+├── .env              # PocketBase credentials
+├── public/           # Built frontend files (auto-generated)
+│   ├── index.html    # Widget demo (/)
+│   ├── assets/       # Widget assets
+│   └── staff/        # Staff panel (/staff)
+└── src/              # Source code
+    ├── staff/        # Staff dashboard source
+    └── widget/       # Widget source
 ```
 
 ## Quick Start
@@ -32,26 +34,18 @@ A professional real-time live chat support system built with React, PocketBase, 
 ### Installation
 
 ```bash
-cd backend
 npm install
 ```
 
-### Build Frontend Apps
+### Build
 
 ```bash
-cd frontend
-npm install
-npm run build
-
-cd ../widget
-npm install
 npm run build
 ```
 
 ### Start Server
 
 ```bash
-cd backend
 npm start
 ```
 

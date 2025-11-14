@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: '/staff/',
   build: {
-    outDir: '../backend/public/staff',
+    outDir: '../../public/staff',
     emptyOutDir: true
   },
   server: {
