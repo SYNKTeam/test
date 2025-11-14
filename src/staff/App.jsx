@@ -9,15 +9,15 @@ import '@mantine/core/styles.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [staffName, setStaffName] = useState('');
+  const [staffUser, setStaffUser] = useState(null);
 
-  const handleLogin = (name) => {
-    setStaffName(name);
+  const handleLogin = (name, user) => {
+    setStaffUser(user);
     setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
-    setStaffName('');
+    setStaffUser(null);
     setIsAuthenticated(false);
   };
 
@@ -37,7 +37,7 @@ function App() {
             path="/staff/dashboard"
             element={
               isAuthenticated ?
-                <StaffDashboard staffName={staffName} onLogout={handleLogout} /> :
+                <StaffDashboard staffUser={staffUser} onLogout={handleLogout} /> :
                 <Navigate to="/staff" />
             }
           />

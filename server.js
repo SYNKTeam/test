@@ -123,6 +123,16 @@ app.post('/api/chats', async (req, res) => {
   try {
     await authenticatePB();
     const chat = await pb.collection('chats').create(req.body);
+
+    // Send welcome message
+    await pb.collection('liveChatMessages').create({
+      message: `Hi ${req.body.author}! 👋 Welcome to our support chat. How can we help you today?`,
+      author: 'system',
+      chatParentID: chat.id,
+      sent: true,
+      read: false
+    });
+
     res.json(chat);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -195,6 +205,45 @@ app.patch('/api/messages/:id/read', async (req, res) => {
       read: true
     });
     res.json(message);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Staff authentication
+app.post('/api/staff/login', async (req, res) => {
+  try {
+    await authenticatePB();
+    const { email, password } = req.body;
+    const authData = await pb.collection('users').authWithPassword(email, password);
+    res.json({
+      user: authData.record,
+      token: authData.token
+    });
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
+
+// Assign staff to chat
+app.post('/api/chats/:id/assign', async (req, res) => {
+  try {
+    await authenticatePB();
+    const { staffName } = req.body;
+    const chat = await pb.collection('chats').update(req.params.id, {
+      assignedStaff: staffName
+    });
+
+    // Send system message
+    await pb.collection('liveChatMessages').create({
+      message: `${staffName} has been assigned to your chat and will assist you shortly.`,
+      author: 'system',
+      chatParentID: req.params.id,
+      sent: true,
+      read: false
+    });
+
+    res.json(chat);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
