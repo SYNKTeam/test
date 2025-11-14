@@ -93,6 +93,22 @@ function ChatWidget({ apiUrl, wsUrl }) {
     }
   }, [messages, isOpen]);
 
+  // Mark messages as read when window regains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isOpen && messages.length > 0) {
+        messages.forEach(message => {
+          if (message.author === 'staff' && !message.read) {
+            markAsRead(message.id);
+          }
+        });
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [messages, isOpen]);
+
   const markAsRead = async (messageId) => {
     if (!document.hasFocus()) return;
 
@@ -291,6 +307,29 @@ function ChatWidget({ apiUrl, wsUrl }) {
                   ) : (
                     messages.map((message) => {
                       const isStaff = message.author === 'staff';
+                      const isSystem = message.author === 'system';
+
+                      // System messages (centered)
+                      if (isSystem) {
+                        return (
+                          <Box key={message.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                            <Paper
+                              p="xs"
+                              style={{
+                                backgroundColor: '#e3f2fd',
+                                color: '#1565c0',
+                                borderRadius: '12px',
+                                maxWidth: '80%',
+                                border: '1px solid #90caf9'
+                              }}
+                            >
+                              <Text size="xs" ta="center" style={{ lineHeight: 1.5 }}>
+                                {message.message}
+                              </Text>
+                            </Paper>
+                          </Box>
+                        );
+                      }
 
                       return (
                         <Box
@@ -382,9 +421,11 @@ function ChatWidget({ apiUrl, wsUrl }) {
                                 minWidth: '60px'
                               }}
                             >
-                              <Text size="sm" c="dimmed">
-                                ...
-                              </Text>
+                              <div className="typing-dots" style={{ color: '#64748b' }}>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                              </div>
                             </Paper>
                           </Group>
                         </Box>

@@ -197,7 +197,31 @@ function ChatWindow({ chat, staffName }) {
       >
         {messages.map((message, index) => {
           const isStaff = message.author === 'staff';
+          const isSystem = message.author === 'system';
           const showAvatar = index === 0 || messages[index - 1].author !== message.author;
+
+          // System messages (centered)
+          if (isSystem) {
+            return (
+              <Box key={message.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                <Paper
+                  p="xs"
+                  style={{
+                    backgroundColor: '#e3f2fd',
+                    color: '#1565c0',
+                    borderRadius: '8px',
+                    maxWidth: '80%',
+                    border: '1px solid #90caf9'
+                  }}
+                  shadow="none"
+                >
+                  <Text size="xs" ta="center" style={{ lineHeight: 1.5 }}>
+                    {message.message}
+                  </Text>
+                </Paper>
+              </Box>
+            );
+          }
 
           return (
             <Box
@@ -290,9 +314,11 @@ function ChatWindow({ chat, staffName }) {
                   }}
                   shadow="none"
                 >
-                  <Text size="sm" c="dimmed">
-                    ...
-                  </Text>
+                  <div className="typing-dots" style={{ color: '#64748b' }}>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
                 </Paper>
               </Group>
             </Box>
