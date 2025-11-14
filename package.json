@@ -1,0 +1,32 @@
+{
+  "name": "livechat",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev:staff": "cd src/staff && vite",
+    "dev:widget": "cd src/widget && vite",
+    "build:staff": "cd src/staff && vite build",
+    "build:widget": "cd src/widget && vite build",
+    "build": "npm run build:staff && npm run build:widget"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "pocketbase": "^0.21.1",
+    "ws": "^8.16.0",
+    "dotenv": "^16.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
+    "@mui/material": "^5.15.10",
+    "@mui/icons-material": "^5.15.10",
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "axios": "^1.6.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.1"
+  }
+}
