@@ -231,7 +231,8 @@ app.get('/api/chats', async (req, res) => {
     const chats = await pb.collection('chats').getFullList({
       filter: 'needsHuman = true',
       sort: '-created',
-    }, { $autoCancel: false });
+      $autoCancel: false
+    });
     res.json(chats);
   } catch (error) {
     console.error('[API] /api/chats GET error:', error.message);
@@ -343,7 +344,8 @@ app.get('/api/messages/:chatId', async (req, res) => {
     const messages = await pb.collection('liveChatMessages').getFullList({
       filter: `chatParentID = "${req.params.chatId}"`,
       sort: 'created',
-    }, { $autoCancel: false });
+      $autoCancel: false
+    });
     res.json(messages);
   } catch (error) {
     console.error('[API] /api/messages/:chatId error:', error.message);
