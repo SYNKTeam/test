@@ -120,13 +120,13 @@ function ChatWidget({ apiUrl, wsUrl }) {
     if (!newMessage.trim() || !chatId) return;
 
     try {
-      const response = await axios.post(`${apiUrl}/messages`, {
+      await axios.post(`${apiUrl}/messages`, {
         message: newMessage,
         author: userId,
         chatParentID: chatId
       });
 
-      setMessages(prev => [...prev, response.data]);
+      // Message will be added via WebSocket subscription
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);

@@ -20,7 +20,8 @@ import ChatWindow from '../components/ChatWindow';
 import axios from 'axios';
 
 const API_URL = '/api';
-const WS_URL = `ws://${window.location.host}`;
+const isDev = import.meta.env.DEV;
+const WS_URL = isDev ? 'ws://localhost:3001' : `ws://${window.location.host}`;
 
 function StaffDashboard({ staffName, onLogout }) {
   const [chats, setChats] = useState([]);
@@ -38,13 +39,14 @@ function StaffDashboard({ staffName, onLogout }) {
         loadChats();
       }
 
-      if (data.type === 'message' && selectedChat) {
-        if (data.record.chatParentID === selectedChat.id) {
-          setSelectedChat(prev => ({
-            ...prev,
-            needsRefresh: true
-          }));
-        }
+      if (data.type === 'message') {
+        // Trigger refresh for the chat window
+        setSelectedChat(prev => {
+          if (prev && data.record.chatParentID === prev.id) {
+            return { ...prev, needsRefresh: true };
+          }
+          return prev;
+        });
       }
     };
 

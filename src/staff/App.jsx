@@ -2,30 +2,8 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import StaffLogin from './pages/StaffLogin';
 import StaffDashboard from './pages/StaffDashboard';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#00bfa5',
-      light: '#5df2d6',
-      dark: '#008e76',
-    },
-    secondary: {
-      main: '#64748b',
-    },
-    background: {
-      default: '#f8fafc',
-      paper: '#ffffff',
-    },
-  },
-  typography: {
-    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
-  },
-  shape: {
-    borderRadius: 8,
-  },
-});
+import { CssBaseline, ThemeProvider } from '@mui/material';
+import { theme } from '../theme';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
