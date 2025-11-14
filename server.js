@@ -215,18 +215,18 @@ app.post('/api/chats', async (req, res) => {
       ...req.body,
       assignedStaff: 'ai',
       needsHuman: false
-    });
+    }, { $autoCancel: false });
     console.log('Chat created:', chat.id);
 
-    // Send welcome message immediately
-    await authenticatePB();
+    // Send welcome message with small delay to avoid auto-cancel
+    await new Promise(resolve => setTimeout(resolve, 150));
     const welcomeMessage = await pb.collection('liveChatMessages').create({
       message: `Hi ${req.body.author}! 👋 Welcome to SYNK Hosting support. I'm your AI assistant. How can I help you today?`,
       author: 'ai',
       chatParentID: chat.id,
       sent: true,
       read: false
-    });
+    }, { $autoCancel: false });
     console.log('Welcome message sent:', welcomeMessage.id);
 
     res.json(chat);
@@ -277,10 +277,10 @@ app.post('/api/messages', async (req, res) => {
       ...req.body,
       sent: true,
       read: false
-    });
+    }, { $autoCancel: false });
 
     // Get chat to check if it needs human or is AI-handled
-    const chat = await pb.collection('chats').getOne(req.body.chatParentID);
+    const chat = await pb.collection('chats').getOne(req.body.chatParentID, { $autoCancel: false });
 
     // Only process AI response if message is from customer (not staff/ai) and chat hasn't been escalated
     if (req.body.author !== 'staff' && req.body.author !== 'ai' && !chat.needsHuman) {
@@ -291,26 +291,27 @@ app.post('/api/messages', async (req, res) => {
         console.log('Escalation detected in message:', req.body.message);
 
         // Mark chat as needing human
-        await authenticatePB();
         await pb.collection('chats').update(req.body.chatParentID, {
           needsHuman: true
-        });
+        }, { $autoCancel: false });
+
+        // Small delay before sending escalation message
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Send escalation confirmation
-        await authenticatePB();
         await pb.collection('liveChatMessages').create({
           message: "I understand you'd like to speak with a human agent. I'm connecting you now. A member of our support team will be with you shortly.",
           author: 'ai',
           chatParentID: req.body.chatParentID,
           sent: true,
           read: false
-        });
+        }, { $autoCancel: false });
       } else {
         // Get chat history for AI context
-        await authenticatePB();
         const messages = await pb.collection('liveChatMessages').getFullList({
           filter: `chatParentID = "${req.body.chatParentID}"`,
           sort: 'created',
+          $autoCancel: false
         });
 
         // Build chat history for AI (exclude system welcome messages)
@@ -325,15 +326,17 @@ app.post('/api/messages', async (req, res) => {
         console.log('Getting AI response for chat:', req.body.chatParentID);
         const aiResponse = await getAIResponse(chatHistory);
 
+        // Small delay before sending AI response
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // Send AI response
-        await authenticatePB();
         await pb.collection('liveChatMessages').create({
           message: aiResponse,
           author: 'ai',
           chatParentID: req.body.chatParentID,
           sent: true,
           read: false
-        });
+        }, { $autoCancel: false });
       }
     }
 

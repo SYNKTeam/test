@@ -18,7 +18,7 @@ function StaffLogin({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,60 +52,46 @@ function StaffLogin({ onLogin }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '2rem',
+        background: '#fafafa',
       }}
     >
       <Container size="xs">
         <Paper
-          p="2.5rem"
-          radius="20px"
+          p="48px"
+          radius="12px"
           style={{
-            textAlign: 'center',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
           }}
         >
           <Stack align="center" gap="xl">
-            <Box style={{ position: 'relative', padding: '1rem' }}>
-              <Box
-                style={{
-                  position: 'absolute',
-                  inset: -20,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  opacity: 0.15,
-                  filter: 'blur(30px)',
-                }}
-              />
-              <Avatar
-                size={100}
-                radius="xl"
-                style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
-                }}
-              >
-                <IconHeadset size={54} />
-              </Avatar>
-            </Box>
+            <Avatar
+              size={72}
+              radius="xl"
+              style={{
+                background: '#111827',
+                color: 'white',
+              }}
+            >
+              <IconHeadset size={40} />
+            </Avatar>
 
             <Stack gap="xs" align="center">
-              <Text size="28px" fw={700} c="#1e293b">
+              <Text fw={600} size="xl" c="#111827">
                 Staff Portal
               </Text>
-              <Text c="dimmed" size="sm" fw={500}>
+              <Text size="sm" c="#6b7280">
                 Sign in to access the support dashboard
               </Text>
             </Stack>
 
             {error && (
               <Alert
-                icon={<IconAlertCircle size={18} />}
+                icon={<IconAlertCircle size={16} />}
                 color="red"
                 variant="light"
                 w="100%"
-                radius="md"
+                radius="8px"
                 styles={{
                   root: {
                     border: '1px solid #fecaca',
@@ -117,25 +103,21 @@ function StaffLogin({ onLogin }) {
             )}
 
             <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-              <Stack gap="lg">
+              <Stack gap="md">
                 <TextInput
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  size="lg"
+                  placeholder="Email address"
+                  size="md"
                   autoFocus
                   type="email"
                   required
                   styles={{
                     input: {
-                      borderRadius: '12px',
-                      border: '2px solid #e2e8f0',
-                      fontSize: '15px',
-                      padding: '14px 18px',
-                      transition: 'all 0.2s',
+                      border: '1px solid #d1d5db',
+                      borderRadius: 8,
                       '&:focus': {
-                        borderColor: '#667eea',
-                        boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                        borderColor: '#111827',
                       }
                     }
                   }}
@@ -144,19 +126,15 @@ function StaffLogin({ onLogin }) {
                 <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  size="lg"
+                  placeholder="Password"
+                  size="md"
                   required
                   styles={{
                     input: {
-                      borderRadius: '12px',
-                      border: '2px solid #e2e8f0',
-                      fontSize: '15px',
-                      padding: '14px 18px',
-                      transition: 'all 0.2s',
+                      border: '1px solid #d1d5db',
+                      borderRadius: 8,
                       '&:focus': {
-                        borderColor: '#667eea',
-                        boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                        borderColor: '#111827',
                       }
                     }
                   }}
@@ -165,21 +143,13 @@ function StaffLogin({ onLogin }) {
                 <Button
                   type="submit"
                   fullWidth
-                  size="lg"
+                  size="md"
                   loading={loading}
-                  radius="12px"
+                  radius="8px"
                   style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    fontSize: '16px',
+                    background: '#111827',
+                    color: 'white',
                     fontWeight: 600,
-                    padding: '14px',
-                    height: 'auto',
-                    boxShadow: '0 4px 16px rgba(102, 126, 234, 0.4)',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
-                    }
                   }}
                 >
                   Sign In

@@ -11,15 +11,12 @@ import {
   Stack,
   ScrollArea,
   UnstyledButton,
-  Indicator,
-  Title,
-  Divider
 } from '@mantine/core';
 import {
   IconMessage,
   IconLogout,
   IconUser,
-  IconClock
+  IconSparkles,
 } from '@tabler/icons-react';
 import ChatWindow from '../components/ChatWindow';
 import axios from 'axios';
@@ -72,8 +69,8 @@ function StaffDashboard({ staffUser, onLogout }) {
   };
 
   const handleSelectChat = async (chat) => {
-    // Auto-assign staff if not already assigned
-    if (!chat.assignedStaff || chat.assignedStaff === '') {
+    // Auto-assign staff if chat is unassigned or assigned to AI
+    if (!chat.assignedStaff || chat.assignedStaff === 'ai' || chat.assignedStaff === '') {
       try {
         console.log('Auto-assigning staff to chat:', chat.id);
         const response = await axios.post(`${API_URL}/chats/${chat.id}/assign`, {
@@ -81,11 +78,9 @@ function StaffDashboard({ staffUser, onLogout }) {
         });
         console.log('Assignment response:', response.data);
 
-        // Update the chat locally with the assignment
         const updatedChat = { ...chat, assignedStaff: staffName };
         setSelectedChat(updatedChat);
 
-        // Update the chats list
         setChats(prevChats =>
           prevChats.map(c => c.id === chat.id ? updatedChat : c)
         );
@@ -100,89 +95,48 @@ function StaffDashboard({ staffUser, onLogout }) {
 
   return (
     <AppShell
-      header={{ height: 70 }}
-      navbar={{ width: 340, breakpoint: 'sm' }}
+      header={{ height: 64 }}
+      navbar={{ width: 320, breakpoint: 'sm' }}
       padding={0}
     >
       <AppShell.Header>
         <Box
           style={{
             height: '100%',
-            padding: '0 2rem',
+            padding: '0 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+            borderBottom: '1px solid #e5e7eb',
+            background: 'white',
           }}
         >
-          <Group gap="lg">
+          <Group gap="sm">
             <Avatar
-              size={48}
+              size={36}
               radius="xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-              }}
-            >
-              <IconMessage size={26} />
-            </Avatar>
-            <div>
-              <Title order={2} c="white" style={{ margin: 0, fontWeight: 700 }}>
-                Support Dashboard
-              </Title>
-              <Text size="sm" c="white" opacity={0.9} fw={500}>
-                Real-time customer conversations
-              </Text>
-            </div>
-          </Group>
-          <Group gap="md">
-            <Badge
-              leftSection={
-                <Box
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: '#4ade80',
-                    boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)',
-                  }}
-                />
-              }
-              size="lg"
-              variant="light"
-              color="white"
-              radius="md"
-              style={{
+                background: '#111827',
                 color: 'white',
-                padding: '10px 16px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
               }}
             >
+              <IconMessage size={20} />
+            </Avatar>
+            <Text fw={600} size="md" c="#111827">
+              Support Dashboard
+            </Text>
+          </Group>
+          <Group gap="sm">
+            <Text size="sm" c="#6b7280">
               {staffName}
-            </Badge>
+            </Text>
             <ActionIcon
               onClick={onLogout}
-              variant="light"
-              c="white"
-              size="lg"
-              radius="md"
-              style={{
-                background: 'rgba(255, 255, 255, 0.15)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                transition: 'all 0.2s',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.25)',
-                }
-              }}
+              variant="subtle"
+              c="#6b7280"
+              size="md"
             >
-              <IconLogout size={20} />
+              <IconLogout size={18} />
             </ActionIcon>
           </Group>
         </Box>
@@ -190,54 +144,49 @@ function StaffDashboard({ staffUser, onLogout }) {
 
       <AppShell.Navbar>
         <Box
-          p="lg"
+          p="md"
           style={{
-            borderBottom: '1px solid #f1f5f9',
-            background: '#fafbfc',
+            borderBottom: '1px solid #e5e7eb',
+            background: 'white',
           }}
         >
-          <Group justify="space-between" mb="sm">
-            <Text size="lg" fw={700} c="#1e293b">
-              Conversations
+          <Group justify="space-between">
+            <Text size="sm" fw={600} c="#111827">
+              Escalated Chats
             </Text>
             <Badge
-              size="lg"
-              variant="gradient"
-              gradient={{ from: '#667eea', to: '#764ba2', deg: 135 }}
-              radius="xl"
+              size="sm"
+              variant="filled"
+              color="#111827"
               style={{
-                padding: '6px 14px',
-                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.25)',
+                background: '#111827',
               }}
             >
               {chats.length}
             </Badge>
           </Group>
-          <Text size="sm" c="dimmed" fw={500}>
-            Active customer chats
-          </Text>
         </Box>
 
-        <ScrollArea style={{ flex: 1 }} p="xs">
+        <ScrollArea style={{ flex: 1, background: '#fafafa' }} p="xs">
           <Stack gap="xs">
             {chats.length === 0 ? (
-              <Stack align="center" gap="md" py="xl" px="md">
+              <Stack align="center" gap="sm" py="xl" px="md">
                 <Avatar
-                  size={60}
+                  size={48}
                   radius="xl"
                   style={{
-                    background: 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)',
-                    color: '#64748b',
+                    background: '#f3f4f6',
+                    color: '#9ca3af',
                   }}
                 >
-                  <IconMessage size={30} />
+                  <IconMessage size={24} />
                 </Avatar>
                 <Stack gap={4} align="center">
-                  <Text size="sm" fw={600} c="#64748b" ta="center">
-                    No active chats
+                  <Text size="sm" fw={500} c="#6b7280" ta="center">
+                    No escalated chats
                   </Text>
-                  <Text size="xs" c="dimmed" ta="center">
-                    Waiting for customers...
+                  <Text size="xs" c="#9ca3af" ta="center">
+                    AI is handling all conversations
                   </Text>
                 </Stack>
               </Stack>
@@ -245,125 +194,77 @@ function StaffDashboard({ staffUser, onLogout }) {
               chats.map((chat) => {
                 const isSelected = selectedChat?.id === chat.id;
                 const isAssignedToMe = chat.assignedStaff === staffName;
-                const isUnassigned = !chat.assignedStaff || chat.assignedStaff === '';
+                const isUnassigned = !chat.assignedStaff || chat.assignedStaff === 'ai' || chat.assignedStaff === '';
 
                 return (
                   <UnstyledButton
                     key={chat.id}
                     onClick={() => handleSelectChat(chat)}
                     style={{
-                      padding: '1rem',
-                      borderRadius: '14px',
-                      background: isSelected
-                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                        : 'white',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      background: isSelected ? '#111827' : 'white',
                       color: isSelected ? 'white' : 'inherit',
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      border: isSelected ? 'none' : '1px solid #f1f5f9',
-                      boxShadow: isSelected
-                        ? '0 4px 16px rgba(102, 126, 234, 0.3)'
-                        : '0 1px 3px rgba(0, 0, 0, 0.02)',
-                      transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                      border: isSelected ? 'none' : '1px solid #e5e7eb',
                     }}
                   >
-                    <Group gap="md" wrap="nowrap">
-                      <Indicator
-                        inline
-                        size={10}
-                        color="#4ade80"
-                        processing
-                        disabled={!isUnassigned}
+                    <Group gap="sm" wrap="nowrap">
+                      <Avatar
+                        size={40}
+                        radius="xl"
                         style={{
-                          '& .mantine-Indicator-indicator': {
-                            boxShadow: '0 0 12px rgba(74, 222, 128, 0.8)',
-                          }
+                          background: isSelected ? 'rgba(255,255,255,0.15)' : '#f3f4f6',
+                          color: isSelected ? 'white' : '#6b7280',
+                          fontWeight: 600,
                         }}
                       >
-                        <Avatar
-                          size={48}
-                          radius="xl"
-                          style={{
-                            background: isSelected
-                              ? 'rgba(255, 255, 255, 0.2)'
-                              : 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
-                            color: 'white',
-                            border: isSelected ? '2px solid rgba(255, 255, 255, 0.4)' : 'none',
-                            boxShadow: isSelected
-                              ? '0 2px 8px rgba(0, 0, 0, 0.15)'
-                              : '0 2px 8px rgba(100, 116, 139, 0.25)',
-                            fontWeight: 700,
-                            fontSize: '18px',
-                          }}
-                        >
-                          {chat.author?.[0]?.toUpperCase() || 'A'}
-                        </Avatar>
-                      </Indicator>
+                        {chat.author?.[0]?.toUpperCase() || 'A'}
+                      </Avatar>
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <Text
-                          fw={700}
+                          fw={600}
                           size="sm"
                           style={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
-                            color: isSelected ? 'white' : '#1e293b',
-                            marginBottom: 4,
+                            color: isSelected ? 'white' : '#111827',
                           }}
                         >
                           {chat.author || 'Anonymous User'}
                         </Text>
-                        <Group gap={6} mt={2}>
-                          {isUnassigned ? (
-                            <Badge
-                              size="sm"
-                              variant={isSelected ? 'light' : 'filled'}
-                              color={isSelected ? 'white' : 'red'}
-                              radius="md"
-                              style={{
-                                background: isSelected ? 'rgba(255, 255, 255, 0.2)' : undefined,
-                                color: isSelected ? 'white' : undefined,
-                                fontWeight: 600,
-                              }}
-                            >
-                              New
-                            </Badge>
-                          ) : isAssignedToMe ? (
-                            <Badge
-                              size="sm"
-                              variant={isSelected ? 'light' : 'filled'}
-                              gradient={{ from: '#4ade80', to: '#22c55e', deg: 135 }}
-                              radius="md"
-                              style={{
-                                background: isSelected ? 'rgba(255, 255, 255, 0.2)' : undefined,
-                                color: isSelected ? 'white' : 'white',
-                                fontWeight: 600,
-                              }}
-                            >
-                              Assigned to you
-                            </Badge>
-                          ) : (
-                            <Badge
-                              size="sm"
-                              variant={isSelected ? 'light' : 'filled'}
-                              color={isSelected ? 'white' : 'gray'}
-                              radius="md"
-                              style={{
-                                background: isSelected ? 'rgba(255, 255, 255, 0.2)' : undefined,
-                                fontWeight: 600,
-                              }}
-                            >
-                              {chat.assignedStaff}
-                            </Badge>
-                          )}
-                        </Group>
+                        {isUnassigned ? (
+                          <Badge
+                            size="xs"
+                            variant="filled"
+                            color={isSelected ? 'white' : '#ef4444'}
+                            style={{
+                              background: isSelected ? 'rgba(255,255,255,0.2)' : '#ef4444',
+                              color: isSelected ? 'white' : 'white',
+                              marginTop: 4,
+                            }}
+                          >
+                            Unassigned
+                          </Badge>
+                        ) : isAssignedToMe ? (
+                          <Badge
+                            size="xs"
+                            variant="filled"
+                            color={isSelected ? 'white' : '#10b981'}
+                            style={{
+                              background: isSelected ? 'rgba(255,255,255,0.2)' : '#10b981',
+                              color: 'white',
+                              marginTop: 4,
+                            }}
+                          >
+                            You
+                          </Badge>
+                        ) : (
+                          <Text size="xs" c={isSelected ? 'rgba(255,255,255,0.7)' : '#9ca3af'} mt={2}>
+                            {chat.assignedStaff}
+                          </Text>
+                        )}
                       </Box>
-                      <IconClock
-                        size={18}
-                        style={{
-                          opacity: isSelected ? 0.9 : 0.4,
-                          color: isSelected ? 'white' : '#64748b',
-                        }}
-                      />
                     </Group>
                   </UnstyledButton>
                 );
@@ -380,41 +281,28 @@ function StaffDashboard({ staffUser, onLogout }) {
           <Stack
             align="center"
             justify="center"
-            gap="xl"
+            gap="md"
             style={{
               height: '100%',
-              background: 'linear-gradient(to bottom, #fafbfc 0%, #ffffff 100%)',
+              background: '#fafafa',
             }}
           >
-            <Box style={{ position: 'relative', padding: '2rem' }}>
-              <Box
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  opacity: 0.08,
-                  filter: 'blur(40px)',
-                }}
-              />
-              <Avatar
-                size={140}
-                radius="xl"
-                style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 12px 32px rgba(102, 126, 234, 0.25)',
-                  opacity: 0.9,
-                }}
-              >
-                <IconMessage size={70} />
-              </Avatar>
-            </Box>
-            <Stack gap="xs" align="center">
-              <Text size="xl" fw={700} c="#1e293b">
-                Select a Conversation
+            <Avatar
+              size={80}
+              radius="xl"
+              style={{
+                background: '#f3f4f6',
+                color: '#9ca3af',
+              }}
+            >
+              <IconMessage size={40} />
+            </Avatar>
+            <Stack gap={4} align="center">
+              <Text size="lg" fw={600} c="#111827">
+                Select a conversation
               </Text>
-              <Text size="sm" c="dimmed" ta="center" maw={320} fw={500}>
-                Choose a chat from the sidebar to start helping customers
+              <Text size="sm" c="#6b7280" ta="center" maw={280}>
+                Choose a chat from the sidebar to start helping
               </Text>
             </Stack>
           </Stack>
