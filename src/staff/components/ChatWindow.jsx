@@ -6,19 +6,16 @@ import {
   ActionIcon,
   Text,
   Avatar,
-  Divider,
   Transition,
   Group,
-  Stack,
   ScrollArea,
 } from '@mantine/core';
 import {
   IconSend,
   IconUser,
-  IconHeadset,
   IconCheck,
   IconChecks,
-  IconRobot,
+  IconSparkles,
 } from '@tabler/icons-react';
 import axios from 'axios';
 
@@ -56,7 +53,6 @@ function ChatWindow({ chat, staffName }) {
         setMessages(prev => {
           const exists = prev.some(m => m.id === data.record.id);
           if (exists) {
-            // Update existing message (including read/sent status)
             return prev.map(m => m.id === data.record.id ? { ...data.record } : m);
           }
           return [...prev, data.record];
@@ -106,54 +102,59 @@ function ChatWindow({ chat, staffName }) {
     }
   };
 
-  const sendTypingIndicator = (typing) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'typing',
-        chatId: chat.id,
-        author: 'staff',
-        isTyping: typing
-      }));
-    }
-  };
-
-  const handleTyping = (e) => {
-    setNewMessage(e.target.value);
-
-    if (e.target.value.trim()) {
-      sendTypingIndicator(true);
-
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      typingTimeoutRef.current = setTimeout(() => {
-        sendTypingIndicator(false);
-      }, 2000);
-    } else {
-      sendTypingIndicator(false);
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    }
-  };
-
   const handleSend = async () => {
     if (!newMessage.trim()) return;
 
     try {
       await axios.post(`${API_URL}/messages`, {
-        message: newMessage,
+        message: newMessage.trim(),
         author: 'staff',
         chatParentID: chat.id
       });
+
       setNewMessage('');
-      sendTypingIndicator(false);
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'typing',
+          chatId: chat.id,
+          author: 'staff',
+          isTyping: false
+        }));
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+    }
+  };
+
+  const handleTyping = (e) => {
+    setNewMessage(e.target.value);
+    sendTypingIndicator(true);
+  };
+
+  const sendTypingIndicator = (isTyping) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    ws.send(JSON.stringify({
+      type: 'typing',
+      chatId: chat.id,
+      author: 'staff',
+      isTyping: isTyping
+    }));
+
+    if (isTyping) {
+      typingTimeoutRef.current = setTimeout(() => {
+        ws.send(JSON.stringify({
+          type: 'typing',
+          chatId: chat.id,
+          author: 'staff',
+          isTyping: false
+        }));
+      }, 2000);
     }
   };
 
@@ -166,264 +167,244 @@ function ChatWindow({ chat, staffName }) {
 
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Paper
-        shadow="none"
-        p="xl"
+      <Box
+        p="md"
         style={{
-          borderRadius: 0,
-          borderBottom: '1px solid #f1f5f9',
-          backgroundColor: 'white',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+          borderBottom: '1px solid #e5e7eb',
+          background: 'white',
         }}
       >
-        <Group gap="md">
+        <Group gap="sm">
           <Avatar
-            size={56}
+            size={40}
             radius="xl"
             style={{
-              background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
-              color: 'white',
-              fontWeight: 700,
-              fontSize: '22px',
-              boxShadow: '0 4px 12px rgba(100, 116, 139, 0.25)',
-              border: '3px solid #f8fafc',
+              background: '#f3f4f6',
+              color: '#6b7280',
+              fontWeight: 600,
             }}
           >
             {chat.author?.[0]?.toUpperCase() || 'A'}
           </Avatar>
           <div>
-            <Text fw={700} size="lg" c="#1e293b">
+            <Text fw={600} size="sm" c="#111827">
               {chat.author || 'Anonymous User'}
             </Text>
-            <Group gap={8} align="center" mt={4}>
+            <Group gap={6} align="center">
               <Box
                 style={{
-                  width: 8,
-                  height: 8,
+                  width: 6,
+                  height: 6,
                   borderRadius: '50%',
-                  background: '#4ade80',
-                  boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)',
+                  background: '#10b981',
                 }}
               />
-              <Text size="sm" c="#64748b" fw={500}>
-                Active now
+              <Text size="xs" c="#6b7280">
+                Active
               </Text>
             </Group>
           </div>
         </Group>
-      </Paper>
+      </Box>
 
       <ScrollArea
         style={{
           flex: 1,
-          backgroundColor: '#ffffff'
+          background: '#fafafa',
         }}
         p="md"
       >
-        {messages.map((message, index) => {
+        {messages.map((message) => {
           const isStaff = message.author === 'staff';
           const isAI = message.author === 'ai';
-          const showAvatar = index === 0 || messages[index - 1].author !== message.author;
 
-          // AI messages (centered with robot icon)
           if (isAI) {
             return (
-              <Box key={message.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
-                <Group gap="sm">
+              <Box key={message.id} style={{ marginBottom: 16 }}>
+                <Group gap="xs" align="flex-start">
                   <Avatar
-                    size={26}
+                    size={24}
                     radius="xl"
                     style={{
-                      background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
-                      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.25)',
+                      background: '#6366f1',
+                      color: 'white',
+                      flexShrink: 0,
                     }}
                   >
-                    <IconRobot size={14} />
+                    <IconSparkles size={14} />
                   </Avatar>
-                  <Paper
-                    p="sm"
-                    px="md"
-                    style={{
-                      backgroundColor: '#faf5ff',
-                      color: '#6b21a8',
-                      borderRadius: '16px',
-                      border: '1px solid #e9d5ff',
-                      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.08)',
-                      maxWidth: '420px',
-                    }}
-                    shadow="none"
-                  >
-                    <Text size="sm" style={{ lineHeight: 1.6, fontWeight: 500 }}>
-                      {message.message}
-                    </Text>
-                  </Paper>
-                </Group>
-              </Box>
-            );
-          }
-
-          return (
-            <Box
-              key={message.id}
-              style={{
-                display: 'flex',
-                justifyContent: isStaff ? 'flex-end' : 'flex-start',
-                marginBottom: '1.25rem',
-                paddingLeft: isStaff ? '4rem' : 0,
-                paddingRight: isStaff ? 0 : '4rem',
-              }}
-            >
-              <Group
-                align="flex-end"
-                gap="sm"
-                style={{
-                  flexDirection: isStaff ? 'row-reverse' : 'row',
-                  maxWidth: '100%'
-                }}
-              >
-                {showAvatar ? (
-                  <Avatar
-                    size={36}
-                    radius="xl"
-                    style={{
-                      background: isStaff
-                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                        : 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
-                      boxShadow: isStaff
-                        ? '0 2px 8px rgba(102, 126, 234, 0.25)'
-                        : '0 2px 8px rgba(100, 116, 139, 0.25)',
-                      border: '2px solid white',
-                    }}
-                  >
-                    {isStaff ? <IconHeadset size={18} /> : <IconUser size={18} />}
-                  </Avatar>
-                ) : (
-                  <Box style={{ width: 36, margin: '0' }} />
-                )}
-
-                <div>
-                  <Paper
-                    p="md"
-                    style={{
-                      backgroundColor: isStaff ? '#ffffff' : '#ffffff',
-                      background: isStaff ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#ffffff',
-                      color: isStaff ? 'white' : '#1e293b',
-                      borderRadius: '16px',
-                      borderTopLeftRadius: isStaff ? '16px' : '6px',
-                      borderTopRightRadius: isStaff ? '6px' : '16px',
-                      wordBreak: 'break-word',
-                      border: isStaff ? 'none' : '1px solid #e2e8f0',
-                      boxShadow: isStaff
-                        ? '0 4px 12px rgba(102, 126, 234, 0.3)'
-                        : '0 2px 8px rgba(0, 0, 0, 0.04)',
-                    }}
-                    shadow="none"
-                  >
-                    <Text size="sm" style={{ lineHeight: 1.6 }}>
-                      {message.message}
-                    </Text>
-                  </Paper>
-                  <Group
-                    gap={6}
-                    justify={isStaff ? 'flex-end' : 'flex-start'}
-                    style={{
-                      marginTop: 6,
-                      paddingLeft: isStaff ? 0 : 4,
-                      paddingRight: isStaff ? 4 : 0,
-                    }}
-                  >
-                    <Text size="xs" c="dimmed" fw={500}>
+                  <Box style={{ flex: 1 }}>
+                    <Paper
+                      p="sm"
+                      style={{
+                        background: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 8,
+                        borderTopLeftRadius: 2,
+                      }}
+                    >
+                      <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
+                        {message.message}
+                      </Text>
+                    </Paper>
+                    <Text size="xs" c="#9ca3af" mt={4} ml={2}>
                       {new Date(message.created).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
                     </Text>
-                    {isStaff && (
-                      message.read ? (
-                        <IconChecks size={15} color="#667eea" style={{ strokeWidth: 2.5 }} />
-                      ) : message.sent ? (
-                        <IconCheck size={15} color="#94a3b8" style={{ strokeWidth: 2.5 }} />
-                      ) : null
-                    )}
+                  </Box>
+                </Group>
+              </Box>
+            );
+          }
+
+          if (isStaff) {
+            return (
+              <Box
+                key={message.id}
+                style={{
+                  marginBottom: 16,
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                }}
+              >
+                <Box style={{ maxWidth: '75%' }}>
+                  <Paper
+                    p="sm"
+                    style={{
+                      background: '#111827',
+                      color: 'white',
+                      borderRadius: 8,
+                      borderBottomRightRadius: 2,
+                    }}
+                  >
+                    <Text size="sm" style={{ lineHeight: 1.6 }}>
+                      {message.message}
+                    </Text>
+                  </Paper>
+                  <Group gap={6} justify="flex-end" mt={4} mr={2}>
+                    <Text size="xs" c="#9ca3af">
+                      {new Date(message.created).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </Text>
+                    {message.read ? (
+                      <IconChecks size={14} color="#10b981" />
+                    ) : message.sent ? (
+                      <IconCheck size={14} color="#9ca3af" />
+                    ) : null}
                   </Group>
-                </div>
+                </Box>
+              </Box>
+            );
+          }
+
+          return (
+            <Box key={message.id} style={{ marginBottom: 16 }}>
+              <Group gap="xs" align="flex-start">
+                <Avatar
+                  size={24}
+                  radius="xl"
+                  style={{
+                    background: '#f3f4f6',
+                    color: '#6b7280',
+                    fontWeight: 600,
+                    flexShrink: 0,
+                  }}
+                >
+                  {chat.author?.[0]?.toUpperCase() || 'A'}
+                </Avatar>
+                <Box style={{ flex: 1 }}>
+                  <Paper
+                    p="sm"
+                    style={{
+                      background: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 8,
+                      borderTopLeftRadius: 2,
+                    }}
+                  >
+                    <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
+                      {message.message}
+                    </Text>
+                  </Paper>
+                  <Text size="xs" c="#9ca3af" mt={4} ml={2}>
+                    {new Date(message.created).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </Text>
+                </Box>
               </Group>
             </Box>
           );
         })}
 
-        {/* Typing indicator */}
-        <Transition mounted={isTyping} transition="fade" duration={200}>
-          {(styles) => (
-            <Box style={{ ...styles, display: 'flex', marginBottom: '1.25rem', paddingRight: '4rem' }}>
-              <Group align="flex-end" gap="sm">
-                <Avatar
-                  size={36}
-                  radius="xl"
-                  style={{
-                    background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
-                    boxShadow: '0 2px 8px rgba(100, 116, 139, 0.25)',
-                    border: '2px solid white',
-                  }}
-                >
-                  <IconUser size={18} />
-                </Avatar>
-                <Paper
-                  p="md"
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '16px',
-                    borderTopLeftRadius: '6px',
-                    border: '1px solid #e2e8f0',
-                    minWidth: '70px',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-                  }}
-                  shadow="none"
-                >
-                  <div className="typing-dots" style={{ color: '#667eea' }}>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </Paper>
-              </Group>
-            </Box>
-          )}
-        </Transition>
+        {isTyping && (
+          <Transition mounted={isTyping} transition="fade" duration={200}>
+            {(styles) => (
+              <Box style={{ ...styles, marginBottom: 16 }}>
+                <Group gap="xs" align="flex-start">
+                  <Avatar
+                    size={24}
+                    radius="xl"
+                    style={{
+                      background: '#f3f4f6',
+                      color: '#6b7280',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {chat.author?.[0]?.toUpperCase() || 'A'}
+                  </Avatar>
+                  <Paper
+                    p="sm"
+                    style={{
+                      background: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 8,
+                      minWidth: 60,
+                    }}
+                  >
+                    <div className="typing-dots" style={{ color: '#9ca3af' }}>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </Paper>
+                </Group>
+              </Box>
+            )}
+          </Transition>
+        )}
 
         <div ref={messagesEndRef} />
       </ScrollArea>
 
-      <Paper
-        shadow="none"
-        p="lg"
+      <Box
+        p="md"
         style={{
-          borderRadius: 0,
-          borderTop: '1px solid #f1f5f9',
-          backgroundColor: '#ffffff',
-          boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.03)',
+          background: 'white',
+          borderTop: '1px solid #e5e7eb',
         }}
       >
         <Textarea
           value={newMessage}
           onChange={handleTyping}
           onKeyPress={handleKeyPress}
-          placeholder="Type your message..."
+          placeholder="Type a message..."
           minRows={1}
-          maxRows={4}
+          maxRows={3}
           autosize
           styles={{
             input: {
-              borderRadius: '14px',
-              border: '2px solid #e2e8f0',
-              backgroundColor: '#fafafa',
-              fontSize: '14px',
-              padding: '12px 50px 12px 16px',
-              transition: 'all 0.2s',
+              border: '1px solid #d1d5db',
+              borderRadius: 8,
+              fontSize: 14,
+              padding: '10px 44px 10px 12px',
               '&:focus': {
-                borderColor: '#667eea',
-                backgroundColor: '#ffffff',
-                boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.08)',
+                borderColor: '#111827',
               }
             }
           }}
@@ -431,26 +412,18 @@ function ChatWindow({ chat, staffName }) {
             <ActionIcon
               onClick={handleSend}
               disabled={!newMessage.trim()}
-              size="lg"
-              radius="xl"
+              size="md"
               style={{
-                background: newMessage.trim()
-                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  : '#e2e8f0',
+                background: newMessage.trim() ? '#111827' : '#e5e7eb',
                 color: 'white',
-                marginTop: 'auto',
                 marginBottom: 4,
-                marginRight: 4,
-                transition: 'all 0.2s',
-                cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
-                boxShadow: newMessage.trim() ? '0 2px 8px rgba(102, 126, 234, 0.3)' : 'none',
               }}
             >
-              <IconSend size={18} />
+              <IconSend size={16} />
             </ActionIcon>
           }
         />
-      </Paper>
+      </Box>
     </Box>
   );
 }
