@@ -12,6 +12,12 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
+const POCKETBASE_URL = process.env.POCKETBASE_URL || 'http://192.168.0.52:8091';
+const POCKETBASE_EMAIL = process.env.POCKETBASE_EMAIL || 'root@synkradio.co.uk';
+const POCKETBASE_PASSWORD = process.env.POCKETBASE_PASSWORD || 'CantGetMeNow#13';
+
+console.log('PocketBase URL:', POCKETBASE_URL);
+
 const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
@@ -21,15 +27,15 @@ app.use(express.json());
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-const pb = new PocketBase(process.env.POCKETBASE_URL);
+const pb = new PocketBase(POCKETBASE_URL);
 
 let isAuthenticated = false;
 
 const authenticatePB = async () => {
   if (!isAuthenticated) {
     await pb.admins.authWithPassword(
-      process.env.POCKETBASE_EMAIL,
-      process.env.POCKETBASE_PASSWORD
+      POCKETBASE_EMAIL,
+      POCKETBASE_PASSWORD
     );
     isAuthenticated = true;
   }
