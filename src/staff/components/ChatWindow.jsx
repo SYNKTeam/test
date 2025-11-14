@@ -12,6 +12,8 @@ import {
 import SendIcon from '@mui/icons-material/Send';
 import PersonIcon from '@mui/icons-material/Person';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import CheckIcon from '@mui/icons-material/Check';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
 import axios from 'axios';
 
 const API_URL = '/api';
@@ -39,12 +41,31 @@ function ChatWindow({ chat, staffName }) {
     scrollToBottom();
   }, [messages]);
 
+  // Mark customer messages as read when they load
+  useEffect(() => {
+    if (messages.length > 0) {
+      messages.forEach(message => {
+        if (message.author !== 'staff' && !message.read) {
+          markAsRead(message.id);
+        }
+      });
+    }
+  }, [messages]);
+
   const loadMessages = async () => {
     try {
       const response = await axios.get(`${API_URL}/messages/${chat.id}`);
       setMessages(response.data);
     } catch (error) {
       console.error('Failed to load messages:', error);
+    }
+  };
+
+  const markAsRead = async (messageId) => {
+    try {
+      await axios.patch(`${API_URL}/messages/${messageId}/read`);
+    } catch (error) {
+      console.error('Failed to mark message as read:', error);
     }
   };
 
@@ -161,22 +182,36 @@ function ChatWindow({ chat, staffName }) {
                       {message.message}
                     </Typography>
                   </Paper>
-                  <Typography
-                    variant="caption"
+                  <Box
                     sx={{
-                      display: 'block',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: isStaff ? 'flex-end' : 'flex-start',
+                      gap: 0.5,
                       mt: 0.5,
                       ml: isStaff ? 0 : 1,
-                      mr: isStaff ? 1 : 0,
-                      textAlign: isStaff ? 'right' : 'left',
-                      color: 'text.secondary'
+                      mr: isStaff ? 1 : 0
                     }}
                   >
-                    {new Date(message.created).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary'
+                      }}
+                    >
+                      {new Date(message.created).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </Typography>
+                    {isStaff && (
+                      message.read ? (
+                        <DoneAllIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+                      ) : message.sent ? (
+                        <CheckIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                      ) : null
+                    )}
+                  </Box>
                 </Box>
               </Box>
             </Box>
