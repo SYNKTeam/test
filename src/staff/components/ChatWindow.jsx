@@ -2,19 +2,23 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Paper,
-  TextField,
-  IconButton,
-  Typography,
+  Textarea,
+  ActionIcon,
+  Text,
   Avatar,
   Divider,
-  InputAdornment,
-  Fade
-} from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
-import PersonIcon from '@mui/icons-material/Person';
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
-import CheckIcon from '@mui/icons-material/Check';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
+  Transition,
+  Group,
+  Stack,
+  ScrollArea,
+} from '@mantine/core';
+import {
+  IconSend,
+  IconUser,
+  IconHeadset,
+  IconCheck,
+  IconChecks,
+} from '@tabler/icons-react';
 import axios from 'axios';
 
 const API_URL = '/api';
@@ -41,31 +45,26 @@ function ChatWindow({ chat, staffName }) {
     scrollToBottom();
   }, [messages]);
 
-  // WebSocket connection for real-time updates
   useEffect(() => {
     const websocket = new WebSocket(WS_URL);
 
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      // Handle new/updated messages
       if (data.type === 'message' && data.record.chatParentID === chat.id) {
         setMessages(prev => {
           const exists = prev.some(m => m.id === data.record.id);
           if (exists) {
-            // Update existing message (e.g., read status changed)
             return prev.map(m => m.id === data.record.id ? data.record : m);
           }
           return [...prev, data.record];
         });
 
-        // Mark customer messages as read
         if (data.record.author !== 'staff' && !data.record.read) {
           markAsRead(data.record.id);
         }
       }
 
-      // Handle typing indicators
       if (data.type === 'typing' && data.chatId === chat.id) {
         if (data.author !== 'staff') {
           setIsTyping(data.isTyping);
@@ -85,7 +84,6 @@ function ChatWindow({ chat, staffName }) {
       const response = await axios.get(`${API_URL}/messages/${chat.id}`);
       setMessages(response.data);
 
-      // Mark all customer messages as read
       response.data.forEach(message => {
         if (message.author !== 'staff' && !message.read) {
           markAsRead(message.id);
@@ -97,6 +95,8 @@ function ChatWindow({ chat, staffName }) {
   };
 
   const markAsRead = async (messageId) => {
+    if (!document.hasFocus()) return;
+
     try {
       await axios.patch(`${API_URL}/messages/${messageId}/read`);
     } catch (error) {
@@ -118,16 +118,13 @@ function ChatWindow({ chat, staffName }) {
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
 
-    // Send typing indicator
     if (e.target.value.trim()) {
       sendTypingIndicator(true);
 
-      // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
 
-      // Stop typing indicator after 2 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
         sendTypingIndicator(false);
       }, 2000);
@@ -166,39 +163,37 @@ function ChatWindow({ chat, staffName }) {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Paper
-        elevation={0}
-        sx={{
-          p: 3,
+        shadow="none"
+        p="lg"
+        style={{
           borderRadius: 0,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          borderBottom: '1px solid #e9ecef',
           backgroundColor: 'white'
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ bgcolor: 'secondary.main', width: 48, height: 48 }}>
+        <Group>
+          <Avatar size={48} color="gray">
             {chat.author?.[0]?.toUpperCase() || 'A'}
           </Avatar>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <div>
+            <Text fw={600} size="md">
               {chat.author || 'Anonymous User'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
+            </Text>
+            <Text size="sm" c="dimmed">
               Active now
-            </Typography>
-          </Box>
-        </Box>
+            </Text>
+          </div>
+        </Group>
       </Paper>
 
-      <Box
-        sx={{
+      <ScrollArea
+        style={{
           flex: 1,
-          overflow: 'auto',
-          p: 3,
           backgroundColor: '#ffffff'
         }}
+        p="md"
       >
         {messages.map((message, index) => {
           const isStaff = message.author === 'staff';
@@ -207,166 +202,136 @@ function ChatWindow({ chat, staffName }) {
           return (
             <Box
               key={message.id}
-              sx={{
+              style={{
                 display: 'flex',
                 justifyContent: isStaff ? 'flex-end' : 'flex-start',
-                mb: 2
+                marginBottom: '1rem'
               }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
+              <Group
+                align="flex-end"
+                style={{
                   flexDirection: isStaff ? 'row-reverse' : 'row',
-                  alignItems: 'flex-end',
                   maxWidth: '65%'
                 }}
               >
                 {showAvatar ? (
                   <Avatar
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      mx: 1,
-                      bgcolor: isStaff ? 'primary.main' : 'secondary.main'
-                    }}
+                    size={32}
+                    color={isStaff ? 'teal' : 'gray'}
+                    style={{ margin: '0 0.5rem' }}
                   >
-                    {isStaff ?
-                      <SupportAgentIcon fontSize="small" /> :
-                      <PersonIcon fontSize="small" />
-                    }
+                    {isStaff ? <IconHeadset size={16} /> : <IconUser size={16} />}
                   </Avatar>
                 ) : (
-                  <Box sx={{ width: 32, mx: 1 }} />
+                  <Box style={{ width: 32, margin: '0 0.5rem' }} />
                 )}
 
-                <Box>
+                <div>
                   <Paper
-                    elevation={0}
-                    sx={{
-                      p: 1.5,
-                      backgroundColor: isStaff ? 'primary.main' : '#f1f5f9',
-                      color: isStaff ? 'white' : 'text.primary',
-                      borderRadius: 2,
+                    p="sm"
+                    style={{
+                      backgroundColor: isStaff ? '#00bfa5' : '#f1f5f9',
+                      color: isStaff ? 'white' : '#1e293b',
+                      borderRadius: '8px',
                       wordBreak: 'break-word',
-                      border: '1px solid',
-                      borderColor: isStaff ? 'primary.main' : '#e2e8f0'
+                      border: isStaff ? 'none' : '1px solid #e2e8f0'
                     }}
+                    shadow="none"
                   >
-                    <Typography variant="body1" sx={{ fontSize: '0.95rem' }}>
+                    <Text size="sm" style={{ lineHeight: 1.5 }}>
                       {message.message}
-                    </Typography>
+                    </Text>
                   </Paper>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: isStaff ? 'flex-end' : 'flex-start',
-                      gap: 0.5,
-                      mt: 0.5,
-                      ml: isStaff ? 0 : 1,
-                      mr: isStaff ? 1 : 0
+                  <Group
+                    gap={4}
+                    justify={isStaff ? 'flex-end' : 'flex-start'}
+                    style={{
+                      marginTop: 4,
+                      marginLeft: isStaff ? 0 : 8,
+                      marginRight: isStaff ? 8 : 0
                     }}
                   >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: 'text.secondary'
-                      }}
-                    >
+                    <Text size="xs" c="dimmed">
                       {new Date(message.created).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
-                    </Typography>
+                    </Text>
                     {isStaff && (
                       message.read ? (
-                        <DoneAllIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+                        <IconChecks size={14} color="#00bfa5" />
                       ) : message.sent ? (
-                        <CheckIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                        <IconCheck size={14} color="#64748b" />
                       ) : null
                     )}
-                  </Box>
-                </Box>
-              </Box>
+                  </Group>
+                </div>
+              </Group>
             </Box>
           );
         })}
 
         {/* Typing indicator */}
-        <Fade in={isTyping}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'flex-start',
-              mb: 2
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', maxWidth: '65%' }}>
-              <Avatar sx={{ width: 32, height: 32, mx: 1, bgcolor: 'secondary.main' }}>
-                <PersonIcon fontSize="small" />
-              </Avatar>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 1.5,
-                  backgroundColor: '#f1f5f9',
-                  borderRadius: 2,
-                  border: '1px solid #e2e8f0',
-                  minWidth: '60px'
-                }}
-              >
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  typing...
-                </Typography>
-              </Paper>
+        <Transition mounted={isTyping} transition="fade" duration={200}>
+          {(styles) => (
+            <Box style={{ ...styles, display: 'flex', marginBottom: '1rem' }}>
+              <Group align="flex-end">
+                <Avatar size={32} color="gray" style={{ margin: '0 0.5rem' }}>
+                  <IconUser size={16} />
+                </Avatar>
+                <Paper
+                  p="sm"
+                  style={{
+                    backgroundColor: '#f1f5f9',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    minWidth: '60px'
+                  }}
+                  shadow="none"
+                >
+                  <Text size="sm" c="dimmed">
+                    ...
+                  </Text>
+                </Paper>
+              </Group>
             </Box>
-          </Box>
-        </Fade>
+          )}
+        </Transition>
 
         <div ref={messagesEndRef} />
-      </Box>
+      </ScrollArea>
 
       <Paper
-        elevation={0}
-        sx={{
-          p: 2,
+        shadow="none"
+        p="md"
+        style={{
           borderRadius: 0,
-          borderTop: '1px solid',
-          borderColor: 'divider',
+          borderTop: '1px solid #e9ecef',
           backgroundColor: 'white'
         }}
       >
-        <TextField
-          fullWidth
-          multiline
-          maxRows={4}
+        <Textarea
           value={newMessage}
           onChange={handleTyping}
           onKeyPress={handleKeyPress}
           placeholder="Type your message..."
-          variant="outlined"
-          size="small"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={handleSend}
-                  disabled={!newMessage.trim()}
-                  color="primary"
-                  sx={{
-                    '&:disabled': {
-                      opacity: 0.3
-                    }
-                  }}
-                >
-                  <SendIcon />
-                </IconButton>
-              </InputAdornment>
-            )
-          }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
+          minRows={1}
+          maxRows={4}
+          autosize
+          rightSection={
+            <ActionIcon
+              onClick={handleSend}
+              disabled={!newMessage.trim()}
+              color="teal"
+              variant="subtle"
+              style={{ marginTop: 'auto', marginBottom: 4 }}
+            >
+              <IconSend size={18} />
+            </ActionIcon>
+          }
+          styles={{
+            root: {
               backgroundColor: '#f8fafc'
             }
           }}

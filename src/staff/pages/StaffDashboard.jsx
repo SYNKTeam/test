@@ -2,20 +2,20 @@ import { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Typography,
-  AppBar,
-  Toolbar,
-  IconButton,
+  Text,
   Avatar,
-  Chip
-} from '@mui/material';
-import ChatIcon from '@mui/icons-material/Chat';
-import LogoutIcon from '@mui/icons-material/Logout';
-import PersonIcon from '@mui/icons-material/Person';
+  Badge,
+  ActionIcon,
+  Group,
+  Stack,
+  ScrollArea,
+  UnstyledButton
+} from '@mantine/core';
+import {
+  IconMessage,
+  IconLogout,
+  IconUser
+} from '@tabler/icons-react';
 import ChatWindow from '../components/ChatWindow';
 import axios from 'axios';
 
@@ -40,7 +40,6 @@ function StaffDashboard({ staffName, onLogout }) {
       }
 
       if (data.type === 'message') {
-        // Trigger refresh for the chat window
         setSelectedChat(prev => {
           if (prev && data.record.chatParentID === prev.id) {
             return { ...prev, needsRefresh: true };
@@ -67,116 +66,140 @@ function StaffDashboard({ staffName, onLogout }) {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <AppBar
-        position="static"
-        elevation={0}
-        sx={{
+    <Box style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <Box
+        style={{
           backgroundColor: 'white',
-          borderBottom: '1px solid',
-          borderColor: 'divider'
+          borderBottom: '1px solid #e9ecef',
+          padding: '1rem 1.5rem'
         }}
       >
-        <Toolbar>
-          <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-            <ChatIcon />
-          </Avatar>
-          <Typography variant="h6" sx={{ flexGrow: 1, color: 'text.primary', fontWeight: 600 }}>
-            Support Dashboard
-          </Typography>
-          <Chip
-            avatar={<Avatar sx={{ bgcolor: 'primary.light' }}><PersonIcon /></Avatar>}
-            label={staffName}
-            sx={{ mr: 2 }}
-          />
-          <IconButton onClick={onLogout} sx={{ color: 'text.secondary' }}>
-            <LogoutIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+        <Group justify="space-between">
+          <Group>
+            <Avatar size="md" color="teal">
+              <IconMessage size={20} />
+            </Avatar>
+            <Text size="lg" fw={600}>
+              Support Dashboard
+            </Text>
+          </Group>
+          <Group>
+            <Badge
+              leftSection={
+                <Avatar size={20} color="teal.1">
+                  <IconUser size={12} />
+                </Avatar>
+              }
+              size="lg"
+              variant="light"
+              color="teal"
+            >
+              {staffName}
+            </Badge>
+            <ActionIcon onClick={onLogout} variant="subtle" color="gray">
+              <IconLogout size={20} />
+            </ActionIcon>
+          </Group>
+        </Group>
+      </Box>
 
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <Box style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Paper
-          elevation={0}
-          sx={{
+          style={{
             width: 320,
             borderRadius: 0,
-            borderRight: '1px solid',
-            borderColor: 'divider',
+            borderRight: '1px solid #e9ecef',
             display: 'flex',
             flexDirection: 'column',
             backgroundColor: '#fafafa'
           }}
+          shadow="none"
         >
-          <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider', backgroundColor: 'white' }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+          <Box
+            p="lg"
+            style={{
+              borderBottom: '1px solid #e9ecef',
+              backgroundColor: 'white'
+            }}
+          >
+            <Text size="lg" fw={600} mb={4}>
               Conversations
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
+            </Text>
+            <Text size="sm" c="dimmed">
               {chats.length} active chat{chats.length !== 1 ? 's' : ''}
-            </Typography>
+            </Text>
           </Box>
 
-          <List sx={{ flex: 1, overflow: 'auto', p: 1 }}>
-            {chats.map((chat) => (
-              <ListItem key={chat.id} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton
-                  selected={selectedChat?.id === chat.id}
+          <ScrollArea style={{ flex: 1 }} p="xs">
+            <Stack gap="xs">
+              {chats.map((chat) => (
+                <UnstyledButton
+                  key={chat.id}
                   onClick={() => setSelectedChat(chat)}
-                  sx={{
-                    borderRadius: 1,
-                    '&.Mui-selected': {
-                      backgroundColor: 'primary.main',
-                      color: 'white',
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    backgroundColor: selectedChat?.id === chat.id ? '#00bfa5' : 'white',
+                    color: selectedChat?.id === chat.id ? 'white' : 'inherit',
+                    transition: 'all 0.2s',
+                  }}
+                  styles={{
+                    root: {
                       '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      },
-                    },
+                        backgroundColor: selectedChat?.id === chat.id ? '#008e76' : '#f8f9fa',
+                      }
+                    }
                   }}
                 >
-                  <Avatar sx={{ mr: 2, width: 40, height: 40, bgcolor: 'secondary.main' }}>
-                    {chat.author?.[0]?.toUpperCase() || 'A'}
-                  </Avatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  <Group>
+                    <Avatar size={40} color="gray">
+                      {chat.author?.[0]?.toUpperCase() || 'A'}
+                    </Avatar>
+                    <div style={{ flex: 1 }}>
+                      <Text fw={500} size="sm">
                         {chat.author || 'Anonymous User'}
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                      </Text>
+                      <Text
+                        size="xs"
+                        style={{
+                          opacity: selectedChat?.id === chat.id ? 0.9 : 0.6
+                        }}
+                      >
                         {chat.assignedStaff || 'Unassigned'}
-                      </Typography>
-                    }
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
+                      </Text>
+                    </div>
+                  </Group>
+                </UnstyledButton>
+              ))}
+            </Stack>
+          </ScrollArea>
         </Paper>
 
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
+        <Box
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#f8fafc'
+          }}
+        >
           {selectedChat ? (
             <ChatWindow chat={selectedChat} staffName={staffName} />
           ) : (
-            <Box
-              sx={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'text.secondary'
-              }}
+            <Stack
+              align="center"
+              justify="center"
+              style={{ flex: 1 }}
+              c="dimmed"
             >
-              <ChatIcon sx={{ fontSize: 80, mb: 2, opacity: 0.3 }} />
-              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+              <IconMessage size={80} opacity={0.3} />
+              <Text size="lg" fw={500}>
                 Select a conversation
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>
+              </Text>
+              <Text size="sm" mt="xs">
                 Choose a chat from the sidebar to start messaging
-              </Typography>
-            </Box>
+              </Text>
+            </Stack>
           )}
         </Box>
       </Box>

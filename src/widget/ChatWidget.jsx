@@ -2,25 +2,26 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Paper,
-  TextField,
-  IconButton,
-  Typography,
+  Textarea,
+  ActionIcon,
+  Text,
   Avatar,
-  Fab,
-  Zoom,
-  Collapse,
   Divider,
-  InputAdornment,
-  Fade
-} from '@mui/material';
-import ChatIcon from '@mui/icons-material/Chat';
-import CloseIcon from '@mui/icons-material/Close';
-import SendIcon from '@mui/icons-material/Send';
-import PersonIcon from '@mui/icons-material/Person';
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
-import MinimizeIcon from '@mui/icons-material/Minimize';
-import CheckIcon from '@mui/icons-material/Check';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
+  Transition,
+  Group,
+  Stack,
+  TextInput,
+} from '@mantine/core';
+import {
+  IconMessage,
+  IconX,
+  IconSend,
+  IconUser,
+  IconHeadset,
+  IconMinus,
+  IconCheck,
+  IconChecks,
+} from '@tabler/icons-react';
 import axios from 'axios';
 
 function ChatWidget({ apiUrl, wsUrl }) {
@@ -57,20 +58,17 @@ function ChatWidget({ apiUrl, wsUrl }) {
           setMessages(prev => {
             const exists = prev.some(m => m.id === data.record.id);
             if (exists) {
-              // Update existing message (e.g., read status changed)
               return prev.map(m => m.id === data.record.id ? data.record : m);
             }
             return [...prev, data.record];
           });
 
-          // Mark staff messages as read automatically when received
           if (data.record.author === 'staff' && !data.record.read) {
             markAsRead(data.record.id);
           }
         }
       }
 
-      // Handle typing indicators
       if (data.type === 'typing' && data.chatId === chatId) {
         if (data.author === 'staff') {
           setIsTyping(data.isTyping);
@@ -85,7 +83,6 @@ function ChatWidget({ apiUrl, wsUrl }) {
     };
   }, [isOpen, hasJoined, chatId, wsUrl]);
 
-  // Mark messages as read when the chat opens and messages load
   useEffect(() => {
     if (messages.length > 0 && isOpen) {
       messages.forEach(message => {
@@ -97,6 +94,8 @@ function ChatWidget({ apiUrl, wsUrl }) {
   }, [messages, isOpen]);
 
   const markAsRead = async (messageId) => {
+    if (!document.hasFocus()) return;
+
     try {
       await axios.patch(`${apiUrl}/messages/${messageId}/read`);
     } catch (error) {
@@ -118,16 +117,13 @@ function ChatWidget({ apiUrl, wsUrl }) {
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
 
-    // Send typing indicator
     if (e.target.value.trim()) {
       sendTypingIndicator(true);
 
-      // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
 
-      // Stop typing indicator after 2 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
         sendTypingIndicator(false);
       }, 2000);
@@ -171,7 +167,6 @@ function ChatWidget({ apiUrl, wsUrl }) {
         chatParentID: chatId
       });
 
-      // Message will be added via WebSocket subscription
       setNewMessage('');
       sendTypingIndicator(false);
       if (typingTimeoutRef.current) {
@@ -194,347 +189,263 @@ function ChatWidget({ apiUrl, wsUrl }) {
   };
 
   return (
-    <Box
-      sx={{
-        position: 'fixed',
-        bottom: 20,
-        right: 20,
-        zIndex: 9999
-      }}
-    >
-      <Zoom in={isOpen}>
-        <Paper
-          elevation={8}
-          sx={{
-            position: 'absolute',
-            bottom: 80,
-            right: 0,
-            width: 380,
-            height: 600,
-            display: isOpen ? 'flex' : 'none',
-            flexDirection: 'column',
-            borderRadius: 3,
-            overflow: 'hidden',
-            boxShadow: '0 12px 48px rgba(0,0,0,0.3)'
-          }}
-        >
-          <Box
-            sx={{
-              background: '#00bfa5',
-              color: 'white',
-              p: 2.5,
+    <Box style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}>
+      <Transition mounted={isOpen} transition="scale" duration={200}>
+        {(styles) => (
+          <Paper
+            style={{
+              ...styles,
+              position: 'absolute',
+              bottom: 80,
+              right: 0,
+              width: 380,
+              height: 600,
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 12px 48px rgba(0,0,0,0.3)'
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)', width: 40, height: 40 }}>
-                <SupportAgentIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                  Chat with us
-                </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.95, fontSize: '0.8rem' }}>
-                  We typically reply instantly
-                </Typography>
-              </Box>
-            </Box>
-            <IconButton
-              size="small"
-              onClick={() => setIsOpen(false)}
-              sx={{ color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
-            >
-              <MinimizeIcon />
-            </IconButton>
-          </Box>
-
-          {!hasJoined ? (
             <Box
-              sx={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                p: 4,
-                gap: 3
+              style={{
+                background: '#00bfa5',
+                color: 'white',
+                padding: '20px',
               }}
             >
-              <Box
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: '50%',
-                  backgroundColor: '#00bfa5',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mb: 1
-                }}
-              >
-                <ChatIcon sx={{ fontSize: 32, color: 'white' }} />
-              </Box>
-              <Typography variant="h6" textAlign="center" sx={{ fontWeight: 600, mb: 1 }}>
-                Start a conversation
-              </Typography>
-              <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 2 }}>
-                We usually respond within a few minutes
-              </Typography>
-              <TextField
-                fullWidth
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Enter your name"
-                variant="outlined"
-                autoFocus
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    '&:hover fieldset': {
-                      borderColor: '#00bfa5',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#00bfa5',
-                    }
-                  }
-                }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={handleJoin}
-                        disabled={!username.trim()}
-                        edge="end"
-                        sx={{
-                          color: '#00bfa5',
-                          '&:disabled': { opacity: 0.3 }
-                        }}
-                      >
-                        <SendIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
+              <Group justify="space-between">
+                <Group>
+                  <Avatar size={40} color="rgba(255,255,255,0.25)">
+                    <IconHeadset size={24} />
+                  </Avatar>
+                  <div>
+                    <Text fw={600} size="lg" c="white">
+                      Chat with us
+                    </Text>
+                    <Text size="xs" c="white" opacity={0.95}>
+                      We typically reply instantly
+                    </Text>
+                  </div>
+                </Group>
+                <ActionIcon
+                  variant="subtle"
+                  color="white"
+                  onClick={() => setIsOpen(false)}
+                  size="lg"
+                >
+                  <IconMinus size={20} />
+                </ActionIcon>
+              </Group>
             </Box>
-          ) : (
-            <>
-              <Box
-                sx={{
-                  flex: 1,
-                  overflow: 'auto',
-                  p: 2,
-                  backgroundColor: '#ffffff'
-                }}
-              >
-                {messages.length === 0 ? (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      gap: 2
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary" textAlign="center">
-                      No messages yet. Start the conversation!
-                    </Typography>
-                  </Box>
-                ) : (
-                  messages.map((message) => {
-                    const isStaff = message.author === 'staff';
 
-                    return (
-                      <Box
-                        key={message.id}
-                        sx={{
-                          display: 'flex',
-                          justifyContent: isStaff ? 'flex-start' : 'flex-end',
-                          mb: 2
-                        }}
-                      >
+            {!hasJoined ? (
+              <Stack
+                align="center"
+                justify="center"
+                gap="lg"
+                style={{ flex: 1, padding: '2rem' }}
+              >
+                <Avatar size={64} color="teal" radius="xl">
+                  <IconMessage size={32} />
+                </Avatar>
+                <Text fw={600} size="lg" ta="center">
+                  Start a conversation
+                </Text>
+                <Text size="sm" c="dimmed" ta="center">
+                  We usually respond within a few minutes
+                </Text>
+                <TextInput
+                  w="100%"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Enter your name"
+                  rightSection={
+                    <ActionIcon
+                      onClick={handleJoin}
+                      disabled={!username.trim()}
+                      color="teal"
+                      variant="subtle"
+                    >
+                      <IconSend size={18} />
+                    </ActionIcon>
+                  }
+                />
+              </Stack>
+            ) : (
+              <>
+                <Box
+                  style={{
+                    flex: 1,
+                    overflow: 'auto',
+                    padding: '1rem',
+                    backgroundColor: '#ffffff'
+                  }}
+                >
+                  {messages.length === 0 ? (
+                    <Stack align="center" justify="center" h="100%">
+                      <Text size="sm" c="dimmed" ta="center">
+                        No messages yet. Start the conversation!
+                      </Text>
+                    </Stack>
+                  ) : (
+                    messages.map((message) => {
+                      const isStaff = message.author === 'staff';
+
+                      return (
                         <Box
-                          sx={{
+                          key={message.id}
+                          style={{
                             display: 'flex',
-                            flexDirection: isStaff ? 'row' : 'row-reverse',
-                            alignItems: 'flex-end',
-                            maxWidth: '75%'
+                            justifyContent: isStaff ? 'flex-start' : 'flex-end',
+                            marginBottom: '1rem'
                           }}
                         >
-                          <Avatar
-                            sx={{
-                              width: 32,
-                              height: 32,
-                              mx: 1,
-                              bgcolor: isStaff ? '#00bfa5' : '#64748b'
+                          <Group
+                            align="flex-end"
+                            style={{
+                              flexDirection: isStaff ? 'row' : 'row-reverse',
+                              maxWidth: '75%'
                             }}
                           >
-                            {isStaff ? <SupportAgentIcon fontSize="small" /> : <PersonIcon fontSize="small" />}
-                          </Avatar>
+                            <Avatar
+                              size={32}
+                              color={isStaff ? 'teal' : 'gray'}
+                              style={{ margin: '0 0.5rem' }}
+                            >
+                              {isStaff ? <IconHeadset size={18} /> : <IconUser size={18} />}
+                            </Avatar>
 
-                          <Box>
-                            <Paper
-                              elevation={0}
-                              sx={{
-                                p: 1.5,
-                                backgroundColor: isStaff ? '#f1f5f9' : '#00bfa5',
-                                color: isStaff ? '#1e293b' : 'white',
-                                borderRadius: '12px',
-                                borderTopLeftRadius: isStaff ? '4px' : '12px',
-                                borderTopRightRadius: isStaff ? '12px' : '4px',
-                                wordBreak: 'break-word',
-                                border: isStaff ? '1px solid #e2e8f0' : 'none'
-                              }}
-                            >
-                              <Typography variant="body2" sx={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
-                                {message.message}
-                              </Typography>
-                            </Paper>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: isStaff ? 'flex-start' : 'flex-end',
-                                gap: 0.5,
-                                mt: 0.5,
-                                ml: isStaff ? 0.5 : 0,
-                                mr: isStaff ? 0 : 0.5
-                              }}
-                            >
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: '#64748b',
-                                  fontSize: '0.7rem'
+                            <div>
+                              <Paper
+                                p="sm"
+                                style={{
+                                  backgroundColor: isStaff ? '#f1f5f9' : '#00bfa5',
+                                  color: isStaff ? '#1e293b' : 'white',
+                                  borderRadius: '12px',
+                                  borderTopLeftRadius: isStaff ? '4px' : '12px',
+                                  borderTopRightRadius: isStaff ? '12px' : '4px',
+                                  wordBreak: 'break-word',
+                                  border: isStaff ? '1px solid #e2e8f0' : 'none'
                                 }}
                               >
-                                {new Date(message.created).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </Typography>
-                              {!isStaff && (
-                                message.read ? (
-                                  <DoneAllIcon sx={{ fontSize: 14, color: '#00bfa5' }} />
-                                ) : message.sent ? (
-                                  <CheckIcon sx={{ fontSize: 14, color: '#64748b' }} />
-                                ) : null
-                              )}
-                            </Box>
-                          </Box>
+                                <Text size="sm" style={{ lineHeight: 1.5 }}>
+                                  {message.message}
+                                </Text>
+                              </Paper>
+                              <Group
+                                gap={4}
+                                justify={isStaff ? 'flex-start' : 'flex-end'}
+                                style={{
+                                  marginTop: 4,
+                                  marginLeft: isStaff ? 8 : 0,
+                                  marginRight: isStaff ? 0 : 8
+                                }}
+                              >
+                                <Text size="xs" c="dimmed">
+                                  {new Date(message.created).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </Text>
+                                {!isStaff && (
+                                  message.read ? (
+                                    <IconChecks size={14} color="#00bfa5" />
+                                  ) : message.sent ? (
+                                    <IconCheck size={14} color="#64748b" />
+                                  ) : null
+                                )}
+                              </Group>
+                            </div>
+                          </Group>
                         </Box>
-                      </Box>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
 
-                {/* Typing indicator */}
-                {hasJoined && (
-                  <Fade in={isTyping}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'flex-start',
-                        mb: 2
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'flex-end', maxWidth: '75%' }}>
-                        <Avatar sx={{ width: 32, height: 32, mx: 1, bgcolor: '#00bfa5' }}>
-                          <SupportAgentIcon fontSize="small" />
-                        </Avatar>
-                        <Paper
-                          elevation={0}
-                          sx={{
-                            p: 1.5,
-                            backgroundColor: '#f1f5f9',
-                            borderRadius: '12px',
-                            borderTopLeftRadius: '4px',
-                            border: '1px solid #e2e8f0',
-                            minWidth: '60px'
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                            typing...
-                          </Typography>
-                        </Paper>
-                      </Box>
-                    </Box>
-                  </Fade>
-                )}
+                  {/* Typing indicator */}
+                  {hasJoined && (
+                    <Transition mounted={isTyping} transition="fade" duration={200}>
+                      {(styles) => (
+                        <Box style={{ ...styles, display: 'flex', marginBottom: '1rem' }}>
+                          <Group align="flex-end">
+                            <Avatar size={32} color="teal" style={{ margin: '0 0.5rem' }}>
+                              <IconHeadset size={18} />
+                            </Avatar>
+                            <Paper
+                              p="sm"
+                              style={{
+                                backgroundColor: '#f1f5f9',
+                                borderRadius: '12px',
+                                borderTopLeftRadius: '4px',
+                                border: '1px solid #e2e8f0',
+                                minWidth: '60px'
+                              }}
+                            >
+                              <Text size="sm" c="dimmed">
+                                ...
+                              </Text>
+                            </Paper>
+                          </Group>
+                        </Box>
+                      )}
+                    </Transition>
+                  )}
 
-                <div ref={messagesEndRef} />
-              </Box>
+                  <div ref={messagesEndRef} />
+                </Box>
 
-              <Divider />
+                <Divider />
 
-              <Box sx={{ p: 2, backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
-                <TextField
-                  fullWidth
-                  multiline
-                  maxRows={3}
-                  value={newMessage}
-                  onChange={handleTyping}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Write a message..."
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: 'white',
-                      '&:hover fieldset': {
-                        borderColor: '#00bfa5',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#00bfa5',
-                      }
+                <Box p="md" style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                  <Textarea
+                    value={newMessage}
+                    onChange={handleTyping}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Write a message..."
+                    minRows={1}
+                    maxRows={3}
+                    autosize
+                    rightSection={
+                      <ActionIcon
+                        onClick={handleSend}
+                        disabled={!newMessage.trim()}
+                        color="teal"
+                        variant="subtle"
+                        style={{ marginTop: 'auto', marginBottom: 4 }}
+                      >
+                        <IconSend size={18} />
+                      </ActionIcon>
                     }
-                  }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={handleSend}
-                          disabled={!newMessage.trim()}
-                          edge="end"
-                          sx={{
-                            color: '#00bfa5',
-                            '&:disabled': { opacity: 0.3 }
-                          }}
-                        >
-                          <SendIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                  }}
-                />
-              </Box>
-            </>
-          )}
-        </Paper>
-      </Zoom>
+                  />
+                </Box>
+              </>
+            )}
+          </Paper>
+        )}
+      </Transition>
 
-      <Fab
+      <ActionIcon
         onClick={() => setIsOpen(!isOpen)}
-        sx={{
-          width: 60,
-          height: 60,
+        size={60}
+        radius="xl"
+        style={{
           backgroundColor: '#00bfa5',
           color: 'white',
           boxShadow: '0 4px 12px rgba(0,191,165,0.4)',
-          '&:hover': {
-            backgroundColor: '#008e76',
-            boxShadow: '0 6px 16px rgba(0,191,165,0.5)'
+          transition: 'all 0.2s',
+        }}
+        styles={{
+          root: {
+            '&:hover': {
+              backgroundColor: '#008e76',
+              boxShadow: '0 6px 16px rgba(0,191,165,0.5)',
+            }
           }
         }}
       >
-        {isOpen ? <CloseIcon sx={{ fontSize: 28 }} /> : <ChatIcon sx={{ fontSize: 28 }} />}
-      </Fab>
+        {isOpen ? <IconX size={28} /> : <IconMessage size={28} />}
+      </ActionIcon>
     </Box>
   );
 }

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import StaffLogin from './pages/StaffLogin';
 import StaffDashboard from './pages/StaffDashboard';
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { MantineProvider } from '@mantine/core';
 import { theme } from '../theme';
+import '../fonts.css';
+import '@mantine/core/styles.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,8 +22,7 @@ function App() {
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <MantineProvider theme={theme}>
       <BrowserRouter>
         <Routes>
           <Route
@@ -43,7 +44,7 @@ function App() {
           <Route path="*" element={<Navigate to="/staff" />} />
         </Routes>
       </BrowserRouter>
-    </ThemeProvider>
+    </MantineProvider>
   );
 }
 
