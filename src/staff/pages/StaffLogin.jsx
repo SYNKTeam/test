@@ -1,166 +1,118 @@
 import { useState } from 'react';
-import {
-  Box,
-  Container,
-  Paper,
-  TextInput,
-  PasswordInput,
-  Button,
-  Text,
-  Avatar,
-  Stack,
-  Alert
-} from '@mantine/core';
-import { IconHeadset, IconAlertCircle } from '@tabler/icons-react';
+import { IconLock, IconMail, IconAlertCircle } from '@tabler/icons-react';
 import axios from 'axios';
 
-function StaffLogin({ onLogin }) {
+export default function StaffLogin({ onLogin, apiUrl = '/api' }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState('');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password');
-      return;
-    }
-
+    setError(null);
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/staff/login', {
+      const response = await axios.post(`${apiUrl}/staff/login`, {
         email: email.trim(),
-        password: password
+        password
       });
 
+      console.log('[StaffLogin] Login successful');
       onLogin(response.data.user.name || response.data.user.email, response.data.user);
-    } catch (err) {
-      setError('Invalid email or password. Please try again.');
+    } catch (error) {
+      console.error('[StaffLogin] Login failed:', error);
+      setError(error.response?.data?.error || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#fafafa',
-      }}
-    >
-      <Container size="xs">
-        <Paper
-          p="48px"
-          radius="12px"
-          style={{
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-          }}
-        >
-          <Stack align="center" gap="xl">
-            <Avatar
-              size={72}
-              radius="xl"
-              style={{
-                background: '#111827',
-                color: 'white',
-              }}
-            >
-              <IconHeadset size={40} />
-            </Avatar>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-full mb-4">
+              <IconLock className="text-white" size={32} />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Staff Portal
+            </h1>
+            <p className="text-gray-600">
+              Sign in to access the support dashboard
+            </p>
+          </div>
 
-            <Stack gap="xs" align="center">
-              <Text fw={600} size="xl" c="#111827">
-                Staff Portal
-              </Text>
-              <Text size="sm" c="#6b7280">
-                Sign in to access the support dashboard
-              </Text>
-            </Stack>
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+              <IconAlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
 
-            {error && (
-              <Alert
-                icon={<IconAlertCircle size={16} />}
-                color="red"
-                variant="light"
-                w="100%"
-                radius="8px"
-                styles={{
-                  root: {
-                    border: '1px solid #fecaca',
-                  }
-                }}
-              >
-                {error}
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-              <Stack gap="md">
-                <TextInput
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <IconMail className="text-gray-400" size={20} />
+                </div>
+                <input
+                  id="email"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email address"
-                  size="md"
-                  autoFocus
-                  type="email"
                   required
-                  styles={{
-                    input: {
-                      border: '1px solid #d1d5db',
-                      borderRadius: 8,
-                      '&:focus': {
-                        borderColor: '#111827',
-                      }
-                    }
-                  }}
+                  autoFocus
+                  disabled={loading}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="you@company.com"
                 />
+              </div>
+            </div>
 
-                <PasswordInput
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <IconLock className="text-gray-400" size={20} />
+                </div>
+                <input
+                  id="password"
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  size="md"
                   required
-                  styles={{
-                    input: {
-                      border: '1px solid #d1d5db',
-                      borderRadius: 8,
-                      '&:focus': {
-                        borderColor: '#111827',
-                      }
-                    }
-                  }}
+                  disabled={loading}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="••••••••"
                 />
+              </div>
+            </div>
 
-                <Button
-                  type="submit"
-                  fullWidth
-                  size="md"
-                  loading={loading}
-                  radius="8px"
-                  style={{
-                    background: '#111827',
-                    color: 'white',
-                    fontWeight: 600,
-                  }}
-                >
-                  Sign In
-                </Button>
-              </Stack>
-            </form>
-          </Stack>
-        </Paper>
-      </Container>
-    </Box>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 px-4 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-sm text-gray-500 mt-6">
+          SYNK Hosting Support System
+        </p>
+      </div>
+    </div>
   );
 }
-
-export default StaffLogin;

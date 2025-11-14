@@ -15,8 +15,8 @@ const __dirname = path.dirname(__filename);
 const POCKETBASE_URL = 'http://192.168.0.52:8091';
 const POCKETBASE_EMAIL = 'root@synkradio.co.uk';
 const POCKETBASE_PASSWORD = 'CantGetMeNow#13';
-
 const TOGETHER_AI_KEY = '19a70f954fd06451f61d5ce14ef3c98303f72a14f4cfebcaf1a0da3723ffa124';
+
 const AI_SYSTEM_MESSAGE = `You are the AI support agent for SYNK Hosting, a modern web hosting provider offering reliable and affordable hosting solutions. Your role is to assist customers with their hosting inquiries, technical issues, and general questions.
 
 ## Your Capabilities
@@ -47,34 +47,30 @@ const AI_SYSTEM_MESSAGE = `You are the AI support agent for SYNK Hosting, a mode
 
 Remember: Your goal is to resolve issues quickly when possible, and seamlessly escalate to human agents when needed.`;
 
-console.log('PocketBase URL:', POCKETBASE_URL);
-
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, path: '/ws' });
 
 app.use(cors());
 app.use(express.json());
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 const pb = new PocketBase(POCKETBASE_URL);
+const clients = new Map();
 
 const authenticatePB = async () => {
   try {
-    // Always authenticate to ensure we have a valid token
-    // PocketBase SDK will handle token caching automatically
     await pb.collection('_superusers').authWithPassword(
       POCKETBASE_EMAIL,
       POCKETBASE_PASSWORD
     );
+    console.log('[PocketBase] Authenticated successfully');
   } catch (error) {
-    console.error('PocketBase authentication failed:', error);
+    console.error('[PocketBase] Authentication failed:', error.message);
     throw error;
   }
 };
 
-// Call TogetherAI API
 const getAIResponse = async (chatHistory) => {
   try {
     const response = await fetch('https://api.together.xyz/v1/chat/completions', {
@@ -99,20 +95,20 @@ const getAIResponse = async (chatHistory) => {
     });
 
     if (!response.ok) {
-      throw new Error(`TogetherAI API error: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`TogetherAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     return data.choices[0].message.content;
   } catch (error) {
-    console.error('Error calling TogetherAI:', error);
-    return "I apologize, but I'm experiencing technical difficulties. Please try again in a moment, or I can connect you with a human agent.";
+    console.error('[TogetherAI] Error:', error.message);
+    return "I apologize, but I'm experiencing technical difficulties. Would you like me to connect you with a human agent?";
   }
 };
 
-// Detect if user is requesting human agent
 const detectsEscalation = (message) => {
-  const escalationPatterns = [
+  const patterns = [
     /\b(talk|speak|connect|transfer|get|need)\s+(to|me\s+to|with|a)\s+(human|agent|person|representative|support|staff|someone)\b/i,
     /\b(human|real\s+person|agent|representative)\s+(please|help|support)\b/i,
     /\bcan\s+i\s+(talk|speak)\s+to\s+(someone|agent|person|human)\b/i,
@@ -121,21 +117,17 @@ const detectsEscalation = (message) => {
     /\blive\s+agent\b/i,
     /\breal\s+support\b/i
   ];
-
-  return escalationPatterns.some(pattern => pattern.test(message));
+  return patterns.some(pattern => pattern.test(message));
 };
-
-const clients = new Map();
 
 wss.on('connection', (ws) => {
   const clientId = Math.random().toString(36).substring(7);
   clients.set(clientId, ws);
+  console.log(`[WebSocket] Client connected: ${clientId}`);
 
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message.toString());
-
-      // Handle typing indicators
       if (data.type === 'typing') {
         broadcastToClients({
           type: 'typing',
@@ -145,19 +137,25 @@ wss.on('connection', (ws) => {
         });
       }
     } catch (error) {
-      console.error('Error handling WebSocket message:', error);
+      console.error('[WebSocket] Message error:', error.message);
     }
   });
 
   ws.on('close', () => {
     clients.delete(clientId);
+    console.log(`[WebSocket] Client disconnected: ${clientId}`);
+  });
+
+  ws.on('error', (error) => {
+    console.error('[WebSocket] Client error:', error.message);
   });
 });
 
 const broadcastToClients = (data) => {
+  const message = JSON.stringify(data);
   clients.forEach((client) => {
     if (client.readyState === 1) {
-      client.send(JSON.stringify(data));
+      client.send(message);
     }
   });
 };
@@ -182,8 +180,6 @@ pb.collection('chats').subscribe('*', (e) => {
 
 app.post('/api/users', async (req, res) => {
   try {
-    // Simply generate a unique ID for the customer
-    // We don't need to store customers in PocketBase
     const customerId = `customer_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     res.json({
       id: customerId,
@@ -191,16 +187,7 @@ app.post('/api/users', async (req, res) => {
       role: req.body.role || 'customer'
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    await authenticatePB();
-    const user = await pb.collection('liveChatUsers').getOne(req.params.id);
-    res.json(user);
-  } catch (error) {
+    console.error('[API] /api/users error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -208,30 +195,32 @@ app.get('/api/users/:id', async (req, res) => {
 app.post('/api/chats', async (req, res) => {
   try {
     await authenticatePB();
-    console.log('Creating chat with data:', req.body);
 
-    // Assign chat to AI initially, not visible to staff until escalation
     const chat = await pb.collection('chats').create({
       ...req.body,
       assignedStaff: 'ai',
       needsHuman: false
     }, { $autoCancel: false });
-    console.log('Chat created:', chat.id);
 
-    // Send welcome message with small delay to avoid auto-cancel
-    await new Promise(resolve => setTimeout(resolve, 150));
-    const welcomeMessage = await pb.collection('liveChatMessages').create({
-      message: `Hi ${req.body.author}! 👋 Welcome to SYNK Hosting support. I'm your AI assistant. How can I help you today?`,
-      author: 'ai',
-      chatParentID: chat.id,
-      sent: true,
-      read: false
-    }, { $autoCancel: false });
-    console.log('Welcome message sent:', welcomeMessage.id);
+    console.log(`[API] Chat created: ${chat.id}`);
+
+    setTimeout(async () => {
+      try {
+        await pb.collection('liveChatMessages').create({
+          message: `Hi ${req.body.author}! 👋 Welcome to SYNK Hosting support. I'm your AI assistant. How can I help you today?`,
+          author: 'ai',
+          chatParentID: chat.id,
+          sent: true,
+          read: false
+        }, { $autoCancel: false });
+      } catch (error) {
+        console.error('[API] Welcome message error:', error.message);
+      }
+    }, 150);
 
     res.json(chat);
   } catch (error) {
-    console.error('Chat creation error:', error);
+    console.error('[API] /api/chats error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -239,13 +228,13 @@ app.post('/api/chats', async (req, res) => {
 app.get('/api/chats', async (req, res) => {
   try {
     await authenticatePB();
-    // Only show chats that need human assistance
     const chats = await pb.collection('chats').getFullList({
       filter: 'needsHuman = true',
       sort: '-created',
-    });
+    }, { $autoCancel: false });
     res.json(chats);
   } catch (error) {
+    console.error('[API] /api/chats GET error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -253,9 +242,10 @@ app.get('/api/chats', async (req, res) => {
 app.get('/api/chats/:id', async (req, res) => {
   try {
     await authenticatePB();
-    const chat = await pb.collection('chats').getOne(req.params.id);
+    const chat = await pb.collection('chats').getOne(req.params.id, { $autoCancel: false });
     res.json(chat);
   } catch (error) {
+    console.error('[API] /api/chats/:id error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -263,9 +253,10 @@ app.get('/api/chats/:id', async (req, res) => {
 app.patch('/api/chats/:id', async (req, res) => {
   try {
     await authenticatePB();
-    const chat = await pb.collection('chats').update(req.params.id, req.body);
+    const chat = await pb.collection('chats').update(req.params.id, req.body, { $autoCancel: false });
     res.json(chat);
   } catch (error) {
+    console.error('[API] /api/chats/:id PATCH error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -273,48 +264,45 @@ app.patch('/api/chats/:id', async (req, res) => {
 app.post('/api/messages', async (req, res) => {
   try {
     await authenticatePB();
+
     const message = await pb.collection('liveChatMessages').create({
       ...req.body,
       sent: true,
       read: false
     }, { $autoCancel: false });
 
-    // Get chat to check if it needs human or is AI-handled
     const chat = await pb.collection('chats').getOne(req.body.chatParentID, { $autoCancel: false });
 
-    // Only process AI response if message is from customer (not staff/ai) and chat hasn't been escalated
     if (req.body.author !== 'staff' && req.body.author !== 'ai' && !chat.needsHuman) {
-      // Check if user is requesting human agent
       const wantsHuman = detectsEscalation(req.body.message);
 
       if (wantsHuman) {
-        console.log('Escalation detected in message:', req.body.message);
+        console.log(`[Escalation] Detected in chat: ${req.body.chatParentID}`);
 
-        // Mark chat as needing human
         await pb.collection('chats').update(req.body.chatParentID, {
           needsHuman: true
         }, { $autoCancel: false });
 
-        // Small delay before sending escalation message
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Send escalation confirmation
-        await pb.collection('liveChatMessages').create({
-          message: "I understand you'd like to speak with a human agent. I'm connecting you now. A member of our support team will be with you shortly.",
-          author: 'ai',
-          chatParentID: req.body.chatParentID,
-          sent: true,
-          read: false
-        }, { $autoCancel: false });
+        setTimeout(async () => {
+          try {
+            await pb.collection('liveChatMessages').create({
+              message: "I understand you'd like to speak with a human agent. I'm connecting you now. A member of our support team will be with you shortly.",
+              author: 'ai',
+              chatParentID: req.body.chatParentID,
+              sent: true,
+              read: false
+            }, { $autoCancel: false });
+          } catch (error) {
+            console.error('[Escalation] Message error:', error.message);
+          }
+        }, 100);
       } else {
-        // Get chat history for AI context
         const messages = await pb.collection('liveChatMessages').getFullList({
           filter: `chatParentID = "${req.body.chatParentID}"`,
           sort: 'created',
           $autoCancel: false
         });
 
-        // Build chat history for AI (exclude system welcome messages)
         const chatHistory = messages
           .filter(m => m.author !== 'ai' || !m.message.includes('Welcome to'))
           .map(m => ({
@@ -322,27 +310,29 @@ app.post('/api/messages', async (req, res) => {
             content: m.message
           }));
 
-        // Get AI response
-        console.log('Getting AI response for chat:', req.body.chatParentID);
+        console.log(`[AI] Generating response for chat: ${req.body.chatParentID}`);
+
         const aiResponse = await getAIResponse(chatHistory);
 
-        // Small delay before sending AI response
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Send AI response
-        await pb.collection('liveChatMessages').create({
-          message: aiResponse,
-          author: 'ai',
-          chatParentID: req.body.chatParentID,
-          sent: true,
-          read: false
-        }, { $autoCancel: false });
+        setTimeout(async () => {
+          try {
+            await pb.collection('liveChatMessages').create({
+              message: aiResponse,
+              author: 'ai',
+              chatParentID: req.body.chatParentID,
+              sent: true,
+              read: false
+            }, { $autoCancel: false });
+          } catch (error) {
+            console.error('[AI] Message error:', error.message);
+          }
+        }, 100);
       }
     }
 
     res.json(message);
   } catch (error) {
-    console.error('Message creation error:', error);
+    console.error('[API] /api/messages error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -353,9 +343,10 @@ app.get('/api/messages/:chatId', async (req, res) => {
     const messages = await pb.collection('liveChatMessages').getFullList({
       filter: `chatParentID = "${req.params.chatId}"`,
       sort: 'created',
-    });
+    }, { $autoCancel: false });
     res.json(messages);
   } catch (error) {
+    console.error('[API] /api/messages/:chatId error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -365,14 +356,14 @@ app.patch('/api/messages/:id/read', async (req, res) => {
     await authenticatePB();
     const message = await pb.collection('liveChatMessages').update(req.params.id, {
       read: true
-    });
+    }, { $autoCancel: false });
     res.json(message);
   } catch (error) {
+    console.error('[API] /api/messages/:id/read error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Staff authentication
 app.post('/api/staff/login', async (req, res) => {
   try {
     await authenticatePB();
@@ -383,36 +374,37 @@ app.post('/api/staff/login', async (req, res) => {
       token: authData.token
     });
   } catch (error) {
+    console.error('[API] /api/staff/login error:', error.message);
     res.status(401).json({ error: 'Invalid credentials' });
   }
 });
 
-// Assign staff to chat
 app.post('/api/chats/:id/assign', async (req, res) => {
   try {
     await authenticatePB();
     const { staffName } = req.body;
-    console.log(`Assigning ${staffName} to chat ${req.params.id}`);
 
     const chat = await pb.collection('chats').update(req.params.id, {
       assignedStaff: staffName
-    });
-    console.log('Chat updated with assignment:', chat.assignedStaff);
+    }, { $autoCancel: false });
 
-    // Send AI notification message
-    await authenticatePB();
-    const notification = await pb.collection('liveChatMessages').create({
-      message: `${staffName} has joined the chat and will assist you.`,
-      author: 'ai',
-      chatParentID: req.params.id,
-      sent: true,
-      read: false
-    });
-    console.log('Assignment notification sent:', notification.id);
+    setTimeout(async () => {
+      try {
+        await pb.collection('liveChatMessages').create({
+          message: `${staffName} has joined the chat and will assist you.`,
+          author: 'ai',
+          chatParentID: req.params.id,
+          sent: true,
+          read: false
+        }, { $autoCancel: false });
+      } catch (error) {
+        console.error('[Assignment] Message error:', error.message);
+      }
+    }, 100);
 
     res.json(chat);
   } catch (error) {
-    console.error('Chat assignment error:', error);
+    console.error('[API] /api/chats/:id/assign error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -423,6 +415,6 @@ app.get('/staff/*', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket server running`);
+  console.log(`[Server] Running on port ${PORT}`);
+  console.log(`[WebSocket] Available at ws://localhost:${PORT}/ws`);
 });

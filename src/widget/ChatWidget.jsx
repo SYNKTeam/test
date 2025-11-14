@@ -1,29 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  Box,
-  Paper,
-  Textarea,
-  ActionIcon,
-  Text,
-  Avatar,
-  Transition,
-  Group,
-  Stack,
-  TextInput,
-} from '@mantine/core';
-import {
-  IconMessage,
-  IconX,
-  IconSend,
-  IconUser,
-  IconMinus,
-  IconCheck,
-  IconChecks,
-  IconSparkles,
-} from '@tabler/icons-react';
+import { IconMessage, IconX, IconSend, IconCheck, IconChecks, IconSparkles } from '@tabler/icons-react';
 import axios from 'axios';
 
-function ChatWidget({ apiUrl, wsUrl }) {
+export default function ChatWidget({ apiUrl, wsUrl }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -33,6 +12,7 @@ function ChatWidget({ apiUrl, wsUrl }) {
   const [userId, setUserId] = useState(null);
   const [ws, setWs] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -49,30 +29,48 @@ function ChatWidget({ apiUrl, wsUrl }) {
 
     const websocket = new WebSocket(wsUrl);
 
+    websocket.onopen = () => {
+      console.log('[Widget] WebSocket connected');
+      setError(null);
+    };
+
     websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      try {
+        const data = JSON.parse(event.data);
 
-      if (data.type === 'message' && chatId) {
-        if (data.record.chatParentID === chatId) {
-          setMessages(prev => {
-            const exists = prev.some(m => m.id === data.record.id);
-            if (exists) {
-              return prev.map(m => m.id === data.record.id ? { ...data.record } : m);
+        if (data.type === 'message' && chatId) {
+          if (data.record.chatParentID === chatId) {
+            setMessages(prev => {
+              const exists = prev.some(m => m.id === data.record.id);
+              if (exists) {
+                return prev.map(m => m.id === data.record.id ? { ...data.record } : m);
+              }
+              return [...prev, data.record];
+            });
+
+            if (data.record.author === 'staff' && !data.record.read && document.hasFocus()) {
+              markAsRead(data.record.id);
             }
-            return [...prev, data.record];
-          });
-
-          if (data.record.author === 'staff' && !data.record.read && document.hasFocus()) {
-            markAsRead(data.record.id);
           }
         }
-      }
 
-      if (data.type === 'typing' && data.chatId === chatId) {
-        if (data.author === 'staff') {
-          setIsTyping(data.isTyping);
+        if (data.type === 'typing' && data.chatId === chatId) {
+          if (data.author === 'staff') {
+            setIsTyping(data.isTyping);
+          }
         }
+      } catch (error) {
+        console.error('[Widget] WebSocket message error:', error);
       }
+    };
+
+    websocket.onerror = (error) => {
+      console.error('[Widget] WebSocket error:', error);
+      setError('Connection error. Retrying...');
+    };
+
+    websocket.onclose = () => {
+      console.log('[Widget] WebSocket disconnected');
     };
 
     setWs(websocket);
@@ -113,7 +111,7 @@ function ChatWidget({ apiUrl, wsUrl }) {
     try {
       await axios.patch(`${apiUrl}/messages/${messageId}/read`);
     } catch (error) {
-      console.error('Failed to mark message as read:', error);
+      console.error('[Widget] Failed to mark message as read:', error);
     }
   };
 
@@ -121,6 +119,8 @@ function ChatWidget({ apiUrl, wsUrl }) {
     if (!username.trim()) return;
 
     try {
+      setError(null);
+
       const userResponse = await axios.post(`${apiUrl}/users`, {
         username: username.trim(),
         role: 'customer'
@@ -137,7 +137,8 @@ function ChatWidget({ apiUrl, wsUrl }) {
       const messagesResponse = await axios.get(`${apiUrl}/messages/${chatResponse.data.id}`);
       setMessages(messagesResponse.data);
     } catch (error) {
-      console.error('Failed to join chat:', error);
+      console.error('[Widget] Failed to join chat:', error);
+      setError('Failed to start chat. Please try again.');
     }
   };
 
@@ -145,6 +146,8 @@ function ChatWidget({ apiUrl, wsUrl }) {
     if (!newMessage.trim() || !chatId) return;
 
     try {
+      setError(null);
+
       await axios.post(`${apiUrl}/messages`, {
         message: newMessage.trim(),
         author: username,
@@ -162,7 +165,8 @@ function ChatWidget({ apiUrl, wsUrl }) {
         }));
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('[Widget] Failed to send message:', error);
+      setError('Failed to send message. Please try again.');
     }
   };
 
@@ -209,365 +213,178 @@ function ChatWidget({ apiUrl, wsUrl }) {
   };
 
   return (
-    <Box
-      style={{
-        position: 'fixed',
-        bottom: 24,
-        right: 24,
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        gap: 16,
-      }}
-    >
-      <Transition mounted={isOpen} transition="scale" duration={200}>
-        {(styles) => (
-          <Paper
-            style={{
-              ...styles,
-              width: 380,
-              height: 600,
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-              overflow: 'hidden',
-            }}
-          >
-            <Box
-              style={{
-                background: '#ffffff',
-                padding: '20px 24px',
-                borderBottom: '1px solid #e5e7eb',
-              }}
-            >
-              <Group justify="space-between" align="center">
-                <Group gap="sm">
-                  <Box
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: '#10b981',
-                    }}
-                  />
-                  <Text fw={600} size="sm" c="#111827">
-                    SYNK Support
-                  </Text>
-                </Group>
-                <ActionIcon
-                  variant="subtle"
-                  c="#6b7280"
-                  onClick={() => setIsOpen(false)}
-                  size="sm"
-                  radius="sm"
-                >
-                  <IconMinus size={18} />
-                </ActionIcon>
-              </Group>
-            </Box>
-
-            {!hasJoined ? (
-              <Stack
-                align="center"
-                justify="center"
-                gap="lg"
-                style={{
-                  flex: 1,
-                  padding: '48px 32px',
-                  background: '#fafafa',
-                }}
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4">
+      {isOpen && (
+        <div className="w-[380px] h-[600px] flex flex-col bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+          <div className="bg-white px-6 py-5 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <span className="text-sm font-semibold text-gray-900">SYNK Support</span>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <Avatar
-                  size={64}
-                  radius="xl"
-                  style={{
-                    background: '#111827',
-                    color: 'white',
-                  }}
-                >
-                  <IconMessage size={32} />
-                </Avatar>
-                <Stack gap="xs" align="center">
-                  <Text fw={600} size="lg" c="#111827">
-                    Start a conversation
-                  </Text>
-                  <Text size="sm" c="#6b7280" ta="center">
-                    We're here to help
-                  </Text>
-                </Stack>
-                <TextInput
-                  w="100%"
-                  size="md"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Your name"
-                  styles={{
-                    input: {
-                      border: '1px solid #d1d5db',
-                      borderRadius: 8,
-                      '&:focus': {
-                        borderColor: '#111827',
-                      }
-                    }
-                  }}
-                  rightSection={
-                    <ActionIcon
-                      onClick={handleJoin}
-                      disabled={!username.trim()}
-                      size="md"
-                      style={{
-                        background: username.trim() ? '#111827' : '#e5e7eb',
-                        color: 'white',
-                      }}
-                    >
-                      <IconSend size={16} />
-                    </ActionIcon>
-                  }
-                />
-              </Stack>
-            ) : (
-              <>
-                <Box
-                  style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '24px',
-                    background: '#fafafa',
-                  }}
-                >
-                  {messages.map((message) => {
-                    const isStaff = message.author === 'staff';
-                    const isAI = message.author === 'ai';
-                    const isCustomer = !isStaff && !isAI;
+                <IconX size={20} />
+              </button>
+            </div>
+          </div>
 
-                    if (isAI) {
-                      return (
-                        <Box key={message.id} style={{ marginBottom: 16 }}>
-                          <Group gap="xs" align="flex-start">
-                            <Avatar
-                              size={24}
-                              radius="xl"
-                              style={{
-                                background: '#6366f1',
-                                color: 'white',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <IconSparkles size={14} />
-                            </Avatar>
-                            <Box style={{ flex: 1 }}>
-                              <Paper
-                                p="sm"
-                                style={{
-                                  background: 'white',
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: 8,
-                                  borderTopLeftRadius: 2,
-                                }}
-                              >
-                                <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                                  {message.message}
-                                </Text>
-                              </Paper>
-                              <Text size="xs" c="#9ca3af" mt={4} ml={2}>
-                                {new Date(message.created).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </Text>
-                            </Box>
-                          </Group>
-                        </Box>
-                      );
-                    }
+          {!hasJoined ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8 bg-gray-50">
+              <div className="w-16 h-16 rounded-full bg-gray-900 flex items-center justify-center">
+                <IconMessage size={32} className="text-white" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Start a conversation</h3>
+                <p className="text-sm text-gray-600">We're here to help</p>
+              </div>
+              <div className="w-full">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Your name"
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleJoin}
+                    disabled={!username.trim()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md bg-gray-900 disabled:bg-gray-300 text-white flex items-center justify-center transition-colors"
+                  >
+                    <IconSend size={16} />
+                  </button>
+                </div>
+                {error && (
+                  <p className="mt-2 text-sm text-red-600">{error}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                {messages.map((message) => {
+                  const isStaff = message.author === 'staff';
+                  const isAI = message.author === 'ai';
 
-                    if (isStaff) {
-                      return (
-                        <Box key={message.id} style={{ marginBottom: 16 }}>
-                          <Group gap="xs" align="flex-start">
-                            <Avatar
-                              size={24}
-                              radius="xl"
-                              style={{
-                                background: '#111827',
-                                color: 'white',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <IconUser size={14} />
-                            </Avatar>
-                            <Box style={{ flex: 1 }}>
-                              <Paper
-                                p="sm"
-                                style={{
-                                  background: 'white',
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: 8,
-                                  borderTopLeftRadius: 2,
-                                }}
-                              >
-                                <Text size="sm" c="#374151" style={{ lineHeight: 1.6 }}>
-                                  {message.message}
-                                </Text>
-                              </Paper>
-                              <Text size="xs" c="#9ca3af" mt={4} ml={2}>
-                                {new Date(message.created).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </Text>
-                            </Box>
-                          </Group>
-                        </Box>
-                      );
-                    }
-
+                  if (isAI) {
                     return (
-                      <Box
-                        key={message.id}
-                        style={{
-                          marginBottom: 16,
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                        }}
-                      >
-                        <Box style={{ maxWidth: '75%' }}>
-                          <Paper
-                            p="sm"
-                            style={{
-                              background: '#111827',
-                              color: 'white',
-                              borderRadius: 8,
-                              borderBottomRightRadius: 2,
-                            }}
-                          >
-                            <Text size="sm" style={{ lineHeight: 1.6 }}>
-                              {message.message}
-                            </Text>
-                          </Paper>
-                          <Group gap={6} justify="flex-end" mt={4} mr={2}>
-                            <Text size="xs" c="#9ca3af">
-                              {new Date(message.created).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </Text>
-                            {message.read ? (
-                              <IconChecks size={14} color="#10b981" />
-                            ) : message.sent ? (
-                              <IconCheck size={14} color="#9ca3af" />
-                            ) : null}
-                          </Group>
-                        </Box>
-                      </Box>
+                      <div key={message.id} className="mb-4">
+                        <div className="flex items-start gap-2">
+                          <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                            <IconSparkles size={14} className="text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="bg-white border border-gray-200 rounded-lg rounded-tl-sm p-3">
+                              <p className="text-sm text-gray-800 leading-relaxed">{message.message}</p>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 ml-2">
+                              {new Date(message.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     );
-                  })}
+                  }
 
-                  {isTyping && (
-                    <Transition mounted={isTyping} transition="fade" duration={200}>
-                      {(styles) => (
-                        <Box style={{ ...styles, marginBottom: 16 }}>
-                          <Group gap="xs" align="flex-start">
-                            <Avatar
-                              size={24}
-                              radius="xl"
-                              style={{
-                                background: '#111827',
-                                color: 'white',
-                              }}
-                            >
-                              <IconUser size={14} />
-                            </Avatar>
-                            <Paper
-                              p="sm"
-                              style={{
-                                background: 'white',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: 8,
-                                minWidth: 60,
-                              }}
-                            >
-                              <div className="typing-dots" style={{ color: '#9ca3af' }}>
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                              </div>
-                            </Paper>
-                          </Group>
-                        </Box>
-                      )}
-                    </Transition>
-                  )}
+                  if (isStaff) {
+                    return (
+                      <div key={message.id} className="mb-4">
+                        <div className="flex items-start gap-2">
+                          <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs text-white font-semibold">S</span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="bg-white border border-gray-200 rounded-lg rounded-tl-sm p-3">
+                              <p className="text-sm text-gray-800 leading-relaxed">{message.message}</p>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 ml-2">
+                              {new Date(message.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
 
-                  <div ref={messagesEndRef} />
-                </Box>
+                  return (
+                    <div key={message.id} className="mb-4 flex justify-end">
+                      <div className="max-w-[75%]">
+                        <div className="bg-gray-900 text-white rounded-lg rounded-br-sm p-3">
+                          <p className="text-sm leading-relaxed">{message.message}</p>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 mt-1 mr-2">
+                          <p className="text-xs text-gray-500">
+                            {new Date(message.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          {message.read ? (
+                            <IconChecks size={14} className="text-green-500" />
+                          ) : message.sent ? (
+                            <IconCheck size={14} className="text-gray-400" />
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
 
-                <Box
-                  p="md"
-                  style={{
-                    background: 'white',
-                    borderTop: '1px solid #e5e7eb',
-                  }}
-                >
-                  <Textarea
+                {isTyping && (
+                  <div className="mb-4">
+                    <div className="flex items-start gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs text-white font-semibold">S</span>
+                      </div>
+                      <div className="bg-white border border-gray-200 rounded-lg p-3 min-w-[60px]">
+                        <div className="typing-dots">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div className="p-4 bg-white border-t border-gray-200">
+                {error && (
+                  <p className="text-sm text-red-600 mb-2">{error}</p>
+                )}
+                <div className="relative">
+                  <textarea
                     value={newMessage}
                     onChange={handleTyping}
                     onKeyPress={handleKeyPress}
                     placeholder="Type a message..."
-                    minRows={1}
-                    maxRows={3}
-                    autosize
-                    styles={{
-                      input: {
-                        border: '1px solid #d1d5db',
-                        borderRadius: 8,
-                        fontSize: 14,
-                        padding: '10px 44px 10px 12px',
-                        '&:focus': {
-                          borderColor: '#111827',
-                        }
-                      }
-                    }}
-                    rightSection={
-                      <ActionIcon
-                        onClick={handleSend}
-                        disabled={!newMessage.trim()}
-                        size="md"
-                        style={{
-                          background: newMessage.trim() ? '#111827' : '#e5e7eb',
-                          color: 'white',
-                          marginBottom: 4,
-                        }}
-                      >
-                        <IconSend size={16} />
-                      </ActionIcon>
-                    }
+                    rows={1}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                   />
-                </Box>
-              </>
-            )}
-          </Paper>
-        )}
-      </Transition>
+                  <button
+                    onClick={handleSend}
+                    disabled={!newMessage.trim()}
+                    className="absolute right-2 bottom-2 w-8 h-8 rounded-md bg-gray-900 disabled:bg-gray-300 text-white flex items-center justify-center transition-colors"
+                  >
+                    <IconSend size={16} />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
-      <ActionIcon
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        size={56}
-        radius="xl"
-        style={{
-          background: '#111827',
-          color: 'white',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        }}
+        className="w-14 h-14 rounded-full bg-gray-900 text-white shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center"
       >
         {isOpen ? <IconX size={24} /> : <IconMessage size={24} />}
-      </ActionIcon>
-    </Box>
+      </button>
+    </div>
   );
 }
-
-export default ChatWidget;
